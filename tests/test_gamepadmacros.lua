@@ -47,7 +47,7 @@ for _, macro in ipairs(ns.List()) do
     local body = macro.Body and macro.Body() or macro.body
     check(#body <= 255, macro.name .. " fits the game's macro size")
 end
-check(table.concat(names, ",") == "Heal Me,Quest Item,Save Gear,Wear Gear,Leave Group,Hello,Thanks,Follow Me,Need Help",
+check(table.concat(names, ",") == "Heal Me,Quest Item,Bandage,Eat & Drink,Potion,Hearth,Save Gear,Wear Gear,Leave Group,Hello,Thanks,Follow Me,Need Help",
     "a paladin's macros: " .. table.concat(names, ","))
 CLASS = "WARRIOR"
 check(ns.List()[1].name == "Quest Item", "a class with no heal gets them without Heal Me")
@@ -71,10 +71,10 @@ SlashCmdList.GAMEPADMACROS("add")
 for _, name in ipairs(names) do check(Has(name), name .. " is added by /gpm add") end
 local account, character = GetNumMacros()
 check(character == charBefore + 1, "only Heal Me takes a character macro slot")
-check(account == 8, "the other eight are account-wide General macros")
+check(account == 12, "the other twelve are account-wide General macros")
 check(Body("Heal Me"):find("/cast [@player] Holy Light", 1, true), "Heal Me heals yourself with the paladin's heal")
 SlashCmdList.GAMEPADMACROS("add")
-check(GetNumMacros() == 8, "asking again adds nothing twice")
+check(GetNumMacros() == 12, "asking again adds nothing twice")
 
 -- The quest item macro follows the bags.
 check(Body("Quest Item"):find("no quest item", 1, true), "with no quest item it says so when pressed")
@@ -98,6 +98,37 @@ Fire("BAG_UPDATE_DELAYED")
 check(Body("Quest Item"):find("item:5000", 1, true), "a Quest Item macro this addon did not make is left alone")
 ns.db.generalMade["Quest Item"] = true
 
+-- Bandage, Eat & Drink and Potion follow the bags too, picking the best
+-- item this character can use.
+ITEM_LEVELS = {}     -- itemID -> { itemLevel, minLevel }
+UnitLevel = function() return 20 end
+C_Item.GetItemInfo = function(id)
+    local l = ITEM_LEVELS[id]
+    if l then return "item" .. id, "link", 1, l[1], l[2] end
+end
+check(Body("Bandage"):find("no bandage", 1, true) and Body("Eat & Drink"):find("no food or drink", 1, true)
+    and Body("Potion"):find("no healing potion", 1, true), "with nothing in the bags, each says so when pressed")
+BAGS[0] = {
+    [1] = { itemID = 1251 }, [2] = { itemID = 2581 }, [3] = { itemID = 8545 },   -- bandages: linen, heavy linen, heavy mageweave
+    [4] = { itemID = 117 }, [5] = { itemID = 159 }, [6] = { itemID = 4536 },     -- tough jerky, refreshing spring water, apple
+    [7] = { itemID = 118 }, [8] = { itemID = 929 },                               -- minor and healing potion
+}
+for _, id in ipairs({ 1251, 2581, 8545 }) do ITEM_SPELLS[id] = "First Aid" end
+ITEM_SPELLS[117], ITEM_SPELLS[4536], ITEM_SPELLS[159] = "Food", "Food", "Drink"
+ITEM_SPELLS[118], ITEM_SPELLS[929] = "Healing Potion", "Healing Potion"
+ITEM_LEVELS[1251], ITEM_LEVELS[2581], ITEM_LEVELS[8545] = { 1, 1 }, { 20, 1 }, { 50, 1 }
+ITEM_LEVELS[117], ITEM_LEVELS[4536] = { 5, 1 }, { 15, 5 }
+ITEM_LEVELS[118], ITEM_LEVELS[929] = { 5, 1 }, { 25, 22 }   -- the healing potion needs level 22
+Fire("BAG_UPDATE_DELAYED")
+check(Body("Bandage") == "#showtooltip item:8545\n/use item:8545", "Bandage uses the best bandage")
+check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536\n/use item:159", "Eat & Drink eats the best food and drinks the water in one press")
+check(Body("Potion") == "#showtooltip item:118\n/use item:118", "Potion skips one the character is too low to drink")
+BAGS[0][4], BAGS[0][6] = nil, nil
+Fire("BAG_UPDATE_DELAYED")
+check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159", "with only a drink left, it uses the drink")
+check(Body("Hearth") == "#showtooltip item:6948\n/use item:6948", "Hearth uses the Hearthstone")
+BAGS[0] = nil
+
 -- A client without gear sets.
 DeleteMacro(GetMacroIndexByName("Save Gear")); ns.db.generalMade["Save Gear"] = nil
 C_EquipmentSet = nil
@@ -118,7 +149,7 @@ local shown = {}
 for _, f in ipairs(Frames()) do
     if rawget(f, "macro") and rawget(f, "status") and f.__shown then shown[#shown + 1] = f.macro.name end
 end
-check(#shown == 9, "it lists every macro: " .. table.concat(shown, ","))
+check(#shown == 13, "it lists every macro: " .. table.concat(shown, ","))
 local saveRow
 for _, f in ipairs(Frames()) do if rawget(f, "macro") and f.macro.name == "Save Gear" then saveRow = f end end
 check(saveRow.status.__text:find("Needs gear sets", 1, true) and not saveRow.add.__shown, "a waiting macro says what it needs")

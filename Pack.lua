@@ -79,6 +79,64 @@ function ns.QuestItemID()
     return usable
 end
 
+-- The best item in the bags whose use is one of the spells named (an
+-- item's use is a spell: bandages cast "First Aid", food "Food", water
+-- "Drink", both at once "Refreshment", healing potions "Healing Potion").
+-- Best: the highest item level the character is high enough to use.
+-- Returns its item ID, or nil.
+function ns.BestBagItem(spells)
+    if not (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerItemInfo
+            and C_Item and C_Item.GetItemSpell) then
+        return nil
+    end
+    local okLevel, myLevel = pcall(UnitLevel, "player")
+    myLevel = (okLevel and type(myLevel) == "number") and myLevel or 100
+    local best, bestLevel
+    for bag = 0, 4 do
+        local okSlots, slots = pcall(C_Container.GetContainerNumSlots, bag)
+        for slot = 1, (okSlots and type(slots) == "number") and slots or 0 do
+            local okInfo, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
+            local id = okInfo and type(info) == "table" and info.itemID
+            if id then
+                local okSpell, spell = pcall(C_Item.GetItemSpell, id)
+                if okSpell and spell and spells[spell] then
+                    local itemLevel, minLevel = 0, 0
+                    if C_Item.GetItemInfo then
+                        local okItem, _, _, _, level, min = pcall(C_Item.GetItemInfo, id)
+                        if okItem then itemLevel, minLevel = tonumber(level) or 0, tonumber(min) or 0 end
+                    end
+                    if minLevel <= myLevel and (not bestLevel or itemLevel > bestLevel) then
+                        best, bestLevel = id, itemLevel
+                    end
+                end
+            end
+        end
+    end
+    return best
+end
+
+local BANDAGE = { ["First Aid"] = true }
+local FOOD = { ["Food"] = true, ["Refreshment"] = true }
+local DRINK = { ["Drink"] = true, ["Refreshment"] = true }
+local POTION = { ["Healing Potion"] = true }
+local HEARTHSTONE = 6948
+
+-- A body that uses one item, or says in chat that there is none.
+local function UseItem(id, missing)
+    if id then return ("#showtooltip item:%d\n/use item:%d"):format(id, id) end
+    return "/run print(\"GamepadMacros: no " .. missing .. " in your bags.\")"
+end
+
+function ns.BandageBody() return UseItem(ns.BestBagItem(BANDAGE), "bandage") end
+function ns.PotionBody() return UseItem(ns.BestBagItem(POTION), "healing potion") end
+function ns.EatDrinkBody()
+    local food, drink = ns.BestBagItem(FOOD), ns.BestBagItem(DRINK)
+    if food and drink and food ~= drink then
+        return ("#showtooltip item:%d\n/use item:%d\n/use item:%d"):format(food, food, drink)
+    end
+    return UseItem(food or drink, "food or drink")
+end
+
 function ns.QuestItemBody()
     local id = ns.QuestItemID()
     if id then
@@ -103,6 +161,22 @@ function ns.List()
         desc = "Uses the quest item in your bags",
         how = "Uses the item in your bags that starts a quest, or else a quest item you can use. GamepadMacros keeps the macro pointing at the right item as your bags change (outside combat).",
         Body = ns.QuestItemBody, body = ns.QuestItemBody() }
+    list[#list + 1] = { name = "Bandage", general = true, icon = "INV_Misc_Bandage_15",
+        desc = "Uses your best bandage on yourself",
+        how = "Uses the best bandage in your bags that you can use. GamepadMacros keeps the macro on your best one as your bags change (outside combat).",
+        Body = ns.BandageBody, body = ns.BandageBody() }
+    list[#list + 1] = { name = "Eat & Drink", general = true, icon = "INV_Misc_Food_15",
+        desc = "Eats and drinks your best food and water at once",
+        how = "Sits down with your best food and your best drink in one press, to get health and mana back together. With only one of them in your bags, it uses that.",
+        Body = ns.EatDrinkBody, body = ns.EatDrinkBody() }
+    list[#list + 1] = { name = "Potion", general = true, icon = "INV_Potion_51",
+        desc = "Drinks your best healing potion",
+        how = "Drinks the best healing potion in your bags that you can use, for an emergency in a fight.",
+        Body = ns.PotionBody, body = ns.PotionBody() }
+    list[#list + 1] = { name = "Hearth", general = true, icon = "INV_Misc_Rune_01",
+        desc = "Uses your Hearthstone",
+        how = "Uses your Hearthstone to go back to your inn, with no bag to open.",
+        body = ("#showtooltip item:%d\n/use item:%d"):format(HEARTHSTONE, HEARTHSTONE) }
     list[#list + 1] = { name = "Save Gear", general = true, icon = "INV_Chest_Chain",
         desc = "Saves what you are wearing as a gear set",
         how = "Saves everything you are wearing as the gear set \"" .. GEAR_SET .. "\", replacing what was saved before. Wear Gear puts it back on.",

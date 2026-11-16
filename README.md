@@ -8,12 +8,16 @@ Ready-made macros for playing World of Warcraft: Forever (client 1.60.x) with a 
 |---|---|
 | Heal Me | Heals yourself, whatever you have targeted (Holy Light, Lesser Heal or Heal, Healing Touch, Healing Wave; paladins, priests, druids and shamans) |
 | Quest Item | Uses the quest item in your bags: one that starts a quest first, else a quest item you can use. GamepadMacros keeps it pointing at the right item as your bags change |
+| Bandage | Uses your best bandage |
+| Eat & Drink | Eats your best food and drinks your best drink in one press |
+| Potion | Drinks your best healing potion |
+| Hearth | Uses your Hearthstone |
 | Save Gear | Saves what you are wearing as the gear set "GamepadMacros" |
 | Wear Gear | Puts that gear set back on (not in combat) |
 | Leave Group | Leaves your party or raid |
 | Hello, Thanks, Follow Me, Need Help | The /wave, /thank, /followme and /helpme emotes, for when there is no keyboard to type on |
 
-All but Heal Me are account-wide General macros, so they use none of a character's 18 macro slots and every character shares them.
+The macros that use something from your bags (Quest Item, Bandage, Eat & Drink, Potion) follow your bags as they change, outside combat, and always pick the best item your character is high enough to use. All but Heal Me are account-wide General macros, so they use none of a character's 18 macro slots and every character shares them.
 
 ## Using it
 

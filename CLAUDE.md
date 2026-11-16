@@ -14,6 +14,7 @@ Ready-made macros for controller and Steam Deck players. One addon, one reposito
 
 - `Pack.lua`: `ns.List()` builds the macros for the character's class; `ns.ControllerInUse()` is true once `GAME_PAD_ACTIVE_CHANGED` has fired with true this session (connected devices are not enough: the user's PC reports two with none in use). Without `C_GamePad`, true.
 - `Core.lua`: add (only on request), add all, remove (only what it made: `GamepadMacrosDB.generalMade` for account-wide General macros, `GamepadMacrosCharDB.made` for Heal Me), the Quest Item updater (`EditMacro`, out of combat, only if this addon made it), and taking over `MacroKitDB.generalMade` entries on `PLAYER_LOGIN`.
+- Bag-item macros (0.2.0): `ns.BestBagItem(spells)` picks the highest item level usable item whose use spell (C_Item.GetItemSpell) is one of the given names: "First Aid" (bandages), "Food"/"Drink"/"Refreshment", "Healing Potion". Hearthstone is item 6948. `ns.UpdateItemMacros()` rewrites every macro with a `Body` function that this addon made. These spell names are classic ones, unchecked in Forever.
 - `Window.lua`: the "Gamepad macros" window. `MinimapButton.lua`: shown only once a controller is used.
 - None of the macros' game commands (`C_EquipmentSet`, `/equipset`, `C_PartyInfo.LeaveParty`, the emotes, `item:ID` in `/use`) have been checked in Forever yet.
 

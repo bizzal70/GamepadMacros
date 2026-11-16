@@ -144,16 +144,23 @@ function ns.Made(name)
     return (ns.char and ns.char.made[name]) or (ns.db and ns.db.generalMade[name]) or false
 end
 
--- Keeps the Quest Item macro on the right item. Only touches it if this
--- addon made it, and never in combat (the game does not allow it).
-function ns.UpdateQuestItemMacro()
-    if InCombatLockdown() or not ns.db or not ns.db.generalMade[ns.QUEST_ITEM] then return end
-    local ok, index = pcall(GetMacroIndexByName, ns.QUEST_ITEM)
-    if not ok or type(index) ~= "number" or index == 0 then return end
-    local body = ns.QuestItemBody()
-    local okInfo, _, _, current = pcall(GetMacroInfo, index)
-    if okInfo and current == body then return end
-    pcall(EditMacro, index, nil, nil, body)
+-- Keeps the macros that use something from the bags (Quest Item, Bandage,
+-- Eat & Drink, Potion) on the right item. Only touches a macro this addon
+-- made, and never in combat (the game does not allow it).
+function ns.UpdateItemMacros()
+    if InCombatLockdown() or not ns.db then return end
+    for _, macro in ipairs(ns.List()) do
+        if macro.Body and ns.db.generalMade[macro.name] then
+            local ok, index = pcall(GetMacroIndexByName, macro.name)
+            if ok and type(index) == "number" and index > 0 then
+                local body = macro.Body()
+                local okInfo, _, _, current = pcall(GetMacroInfo, index)
+                if not (okInfo and current == body) then
+                    pcall(EditMacro, index, nil, nil, body)
+                end
+            end
+        end
+    end
 end
 
 -- MacroKit 0.6.0 to 0.6.2 carried these macros. Ones it added are taken
@@ -220,7 +227,7 @@ frame:SetScript("OnEvent", function(self, event, arg)
         ns.UpdateMinimapButton()
     elseif event == "PLAYER_LOGIN" then
         AdoptFromMacroKit()
-        ns.UpdateQuestItemMacro()
+        ns.UpdateItemMacros()
     elseif event == "GAME_PAD_ACTIVE_CHANGED" then
         -- The first controller button or stick: the minimap button shows
         -- for the rest of the session.
@@ -232,7 +239,7 @@ frame:SetScript("OnEvent", function(self, event, arg)
         ns.RefreshWindow()
     else
         -- Bags, quests, or combat over: the quest item may have changed.
-        ns.UpdateQuestItemMacro()
+        ns.UpdateItemMacros()
         ns.RefreshWindow()
     end
 end)
