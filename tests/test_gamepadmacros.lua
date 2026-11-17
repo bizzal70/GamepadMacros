@@ -130,23 +130,46 @@ check(MACROS[GetMacroIndexByName("Eat & Drink")].icon == 134400 and MACROS[GetMa
 MACROS[GetMacroIndexByName("Eat & Drink")].icon = "INV_Misc_Food_15"; ns.db.iconSet["Eat & Drink"] = nil
 Fire("BAG_UPDATE_DELAYED")
 check(MACROS[GetMacroIndexByName("Eat & Drink")].icon == 134400 and ns.db.iconSet["Eat & Drink"], "an older fixed icon is switched to the question mark")
--- Sitting down to eat: the button turns into the drink; getting up, back to the food.
-AURAS = {}
-C_UnitAuras = { GetAuraDataBySpellName = function(unit, name) return AURAS[name] and { name = name } or nil end }
-AURAS["Food"] = true; Fire("UNIT_AURA", "player")
-check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159", "once eating, the button turns into the drink")
-AURAS["Drink"] = true; Fire("UNIT_AURA", "player")
-check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536", "eating and drinking: back to the food for next time")
-AURAS = {}; Fire("UNIT_AURA", "player")
-check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536", "getting up: the food")
--- A buff the addon cannot match: finishing the food's cast still counts as eating, for 30 seconds.
+-- Eat, then drink, then back to the food; the button shows each step.
 CLOCK = 1000
 GetTime = function() return CLOCK end
-C_Spell.GetSpellName = function(id) return ({ [433] = "Food" })[id] end
-Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast-1", 433)
-check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159", "finishing eating's cast turns the button into the drink, even without a buff to see")
-CLOCK = 1031; Fire("BAG_UPDATE_DELAYED")
-check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536", "and back to the food once the sitting is over")
+SPELL_NAMES = { [433] = "Food", [430] = "Drink", [1] = "Fireball", [9999] = "Nutritious Food" }
+C_Spell.GetSpellName = function(id) return SPELL_NAMES[id] end
+local FOOD_BODY, DRINK_BODY = "#showtooltip item:4536\n/use item:4536", "#showtooltip item:159\n/use item:159"
+local function Cast(id) Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", id) end
+Cast(1)
+check(Body("Eat & Drink") == FOOD_BODY, "another spell changes nothing")
+Cast(433)
+check(Body("Eat & Drink") == DRINK_BODY, "once the food's cast finishes, the button turns into the drink")
+Cast(430)
+check(Body("Eat & Drink") == FOOD_BODY, "after drinking, back to the food for next time")
+Cast(433); Fire("PLAYER_STARTED_MOVING")
+check(Body("Eat & Drink") == FOOD_BODY, "not pressing twice: moving puts it back to the food")
+Cast(433)
+Fire("UNIT_AURA", "player", { addedAuras = { { auraInstanceID = 77, spellId = 433, name = "Food" } } })
+check(Body("Eat & Drink") == DRINK_BODY, "the eating buff arriving keeps the drink")
+Fire("UNIT_AURA", "player", { removedAuraInstanceIDs = { 76 } })
+check(Body("Eat & Drink") == DRINK_BODY, "another buff going changes nothing")
+Fire("UNIT_AURA", "player", { removedAuraInstanceIDs = { 77 } })
+check(Body("Eat & Drink") == FOOD_BODY, "standing up (the eating buff goes) puts it back to the food")
+AFTERS = {}
+Cast(433)
+for _, fn in ipairs(AFTERS) do fn() end; AFTERS = {}
+check(Body("Eat & Drink") == FOOD_BODY, "if the eating buff is never seen, it goes back to the food after 30 seconds")
+Cast(433)
+Fire("UNIT_AURA", "player", { addedAuras = { { auraInstanceID = 78, spellId = 433, name = "Food" } } })
+for _, fn in ipairs(AFTERS) do fn() end; AFTERS = {}
+check(Body("Eat & Drink") == DRINK_BODY, "but not while the eating buff is still up")
+IN_COMBAT = true; Fire("PLAYER_REGEN_DISABLED"); IN_COMBAT = false; Fire("PLAYER_REGEN_ENABLED")
+check(Body("Eat & Drink") == FOOD_BODY, "going into combat puts it back to the food (once combat is over)")
+-- Buff food (Well Fed) is skipped.
+C_TooltipInfo = { GetItemByID = function(id)
+    return { lines = { { leftText = "item" }, { leftText = id == 4536 and "Use: Restores 243 health. If you spend at least 10 seconds eating you will become well fed." or "Use: Restores 61 health." } } }
+end }
+Fire("BAG_UPDATE_DELAYED")
+check(Body("Eat & Drink") == "#showtooltip item:117\n/use item:117", "buff food is skipped for the best plain food")
+C_TooltipInfo = nil
+SlashCmdList.GAMEPADMACROS("debug")
 SlashCmdList.GAMEPADMACROS("debug")
 check(Body("Potion") == "#showtooltip item:118\n/use item:118", "Potion skips one the character is too low to drink")
 BAGS[0][4], BAGS[0][6] = nil, nil
@@ -196,9 +219,10 @@ Fire("BAG_UPDATE_DELAYED")
 check(Body("Eat & Drink") == "#showtooltip item:2287\n/use item:2287", "out of drinks, it just eats")
 BAGS[0][5] = { itemID = 159 }
 Fire("BAG_UPDATE_DELAYED")
-AURAS["Nutritious Food"] = true; ITEM_SPELLS[2287] = "Nutritious Food"; Fire("UNIT_AURA", "player")
-check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159", "with drinks again and eating, it turns into the drink")
-AURAS = {}; Fire("UNIT_AURA", "player")
+ITEM_SPELLS[2287] = "Nutritious Food"
+Cast(9999)
+check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159", "Forever's Nutritious Food counts as eating too")
+Fire("PLAYER_STARTED_MOVING")
 BAGS[0] = nil
 
 -- A client without gear sets.

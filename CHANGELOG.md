@@ -1,5 +1,14 @@
 # GamepadMacros
 
+## 0.3.0
+
+Eat & Drink, rebuilt around two simple steps:
+
+- **First press: your best plain food.** As soon as its short cast finishes and you are eating, the button turns into **your best plain drink**, so the second press drinks too.
+- **Back to the food** when you drink, move, stand up, or go into combat (or after 30 seconds if the game never shows the eating buff).
+- **Buff food and drink are skipped:** anything that makes you Well Fed is left for you to use yourself.
+- The button always shows the item the next press uses.
+
 ## 0.2.7
 
 - Eat & Drink turns into your drink as soon as you finish the short cast of eating, even when GamepadMacros cannot recognise Forever's eating buff (before, it could stay on the food, and a second press only said a more powerful spell was already active). It turns back into the food 30 seconds later or when you get up.

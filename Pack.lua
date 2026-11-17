@@ -140,12 +140,40 @@ function ns.BestBagItem(spells)
 end
 
 local BANDAGE = { ["First Aid"] = true }
-local DRINK = { ["Drink"] = true, ["Refreshment"] = true }
--- Food: what casts "Food", or anything in the Food & Drink category that is
--- not a drink, whatever this client calls eating.
+local DRINK_SPELLS = { ["Drink"] = true, ["Refreshment"] = true }
+
+-- Buff food and drink (the ones that make you "Well Fed") are kept for when
+-- you want the buff: Eat & Drink skips anything whose tooltip mentions it.
+-- An item whose tooltip has not loaded yet is not judged (nor remembered).
+local givesBuff = {}
+local function GivesBuff(id)
+    if givesBuff[id] ~= nil then return givesBuff[id] end
+    if not (C_TooltipInfo and C_TooltipInfo.GetItemByID) then return false end
+    local ok, data = pcall(C_TooltipInfo.GetItemByID, id)
+    if not (ok and type(data) == "table" and type(data.lines) == "table" and #data.lines > 0) then return false end
+    local buff = false
+    for _, line in ipairs(data.lines) do
+        local text = line.leftText
+        if type(text) == "string" and not (issecretvalue and issecretvalue(text))
+                and text:lower():find("well fed", 1, true) then
+            buff = true
+        end
+    end
+    givesBuff[id] = buff
+    return buff
+end
+
+-- Plain food: what casts "Food" (or "Refreshment", food and drink at once),
+-- or anything else in the Food & Drink category that is not a drink, since
+-- Forever calls eating "Nutritious Food"; never buff food.
 local function FOOD(id, spell)
+    if GivesBuff(id) then return false end
     if spell == "Food" or spell == "Refreshment" then return true end
-    return not DRINK[spell] and IsFoodOrDrink(id)
+    return not DRINK_SPELLS[spell] and IsFoodOrDrink(id)
+end
+-- Plain drink: what casts "Drink" (or "Refreshment"); never a buff drink.
+local function DRINK(id, spell)
+    return DRINK_SPELLS[spell] and not GivesBuff(id)
 end
 local POTION = { ["Healing Potion"] = true }
 local HEARTHSTONE = 6948
@@ -158,70 +186,99 @@ end
 
 function ns.BandageBody() return UseItem(ns.BestBagItem(BANDAGE), "bandage") end
 function ns.PotionBody() return UseItem(ns.BestBagItem(POTION), "healing potion") end
--- Whether the player has the buff an item gives while being used (sitting
--- down eating or drinking). Looked up by the item's spell, by ID and else by
--- name; only out of combat, where buffs are not hidden from addons.
--- Eating or drinking lasts about this long. A food or drink whose use was
--- cast this recently counts as being used even if its buff cannot be found
--- (Forever's eating buff may not carry the item's spell name or ID).
+-- Eat & Drink takes two steps, and the button shows the step it is on:
+--   "food":  uses your best plain food (where it starts)
+--   "drink": uses your best plain drink, from the moment the food's short
+--            cast finishes and you sit down eating
+-- and goes back to "food" when you drink, move, stand up (the eating buff
+-- goes), go into combat, or, if the eating buff was never seen, after
+-- SIT_SECONDS. Both in one press does not work in Forever: the drink
+-- cancels the food's short cast (found 2026-11-17). The macro is rewritten
+-- for each step, and has the question-mark icon, so the button shows the
+-- item. (A /castsequence's icon did not follow its steps.)
 local SIT_SECONDS = 30
-ns.SIT_SECONDS = SIT_SECONDS
-ns.castAt = {}          -- spell name or ID -> when it was last cast
+ns.eatStep = "food"
+local eatSpell, eatName, eatAura   -- the food's spell, and its buff once seen
+local eatToken = 0                 -- tells a stale timer from the current sitting
 
-local function Now()
-    return (GetTime and GetTime()) or time()
+local function Usable(value)
+    return value ~= nil and not (issecretvalue and issecretvalue(value))
 end
 
--- Called for each spell the player finishes casting.
-function ns.NoteCast(spellID)
-    if type(spellID) ~= "number" or (issecretvalue and issecretvalue(spellID)) then return end
-    ns.castAt[spellID] = Now()
-    if C_Spell and C_Spell.GetSpellName then
-        local ok, name = pcall(C_Spell.GetSpellName, spellID)
-        if ok and type(name) == "string" then ns.castAt[name] = Now() end
-    end
-end
-
-local function CastRecently(key)
-    local at = key ~= nil and ns.castAt[key]
-    return at and Now() - at < SIT_SECONDS or false
-end
-
-local function Using(itemID)
-    if not (C_Item and C_Item.GetItemSpell) then return false end
-    local ok, name, spellID = pcall(C_Item.GetItemSpell, itemID)
-    if not ok then return false end
-    if CastRecently(spellID) or CastRecently(name) then return true end
-    if not C_UnitAuras then return false end
-    if type(spellID) == "number" and C_UnitAuras.GetPlayerAuraBySpellID then
-        local okAura, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, spellID)
-        if okAura and aura then return true end
-    end
-    if type(name) == "string" and C_UnitAuras.GetAuraDataBySpellName then
-        local okAura, aura = pcall(C_UnitAuras.GetAuraDataBySpellName, "player", name, "HELPFUL")
-        if okAura and aura then return true end
-    end
-    return false
-end
-
--- Food first, then drink, one per press, the button showing which comes
--- next. In Forever eating starts with a short cast, and using the drink in
--- the same press cancels it, so only the drink happened (found 2026-11-17);
--- drinking once already eating keeps both. A /castsequence did the two
--- presses, but its icon did not follow the steps, so instead the macro is
--- rewritten as you sit down: the food until you are eating, then the drink,
--- and the food again once you get up (UNIT_AURA).
-ns.Using = Using
 function ns.FoodAndDrink()
     return ns.BestBagItem(FOOD), ns.BestBagItem(DRINK)
 end
 
-function ns.EatDrinkBody()
-    local food, drink = ns.BestBagItem(FOOD), ns.BestBagItem(DRINK)
-    if food and drink and food ~= drink then
-        if Using(food) and not Using(drink) then
-            return UseItem(drink, "drink")
+function ns.SetEatStep(step)
+    if step == "food" then eatSpell, eatName, eatAura = nil, nil, nil end
+    if ns.eatStep == step then return end
+    ns.eatStep = step
+    ns.UpdateItemMacros()
+end
+
+-- Whether a spell the player just cast is the one this item casts.
+local function CastsItem(spellID, itemID)
+    if not itemID then return false end
+    local ok, name, id = pcall(C_Item.GetItemSpell, itemID)
+    if not ok then return false end
+    if Usable(id) and id == spellID then return true end
+    if type(name) == "string" and C_Spell and C_Spell.GetSpellName then
+        local okName, cast = pcall(C_Spell.GetSpellName, spellID)
+        if okName and cast == name then return true end
+    end
+    return false
+end
+
+-- UNIT_SPELLCAST_SUCCEEDED for the player.
+function ns.OnPlayerCast(spellID)
+    if not Usable(spellID) then return end
+    local food, drink = ns.FoodAndDrink()
+    if CastsItem(spellID, food) then
+        ns.SetEatStep("drink")
+        eatSpell, eatAura = spellID, nil
+        local okName, name = pcall(C_Spell.GetSpellName, spellID)
+        eatName = okName and name or nil
+        eatToken = eatToken + 1
+        local token = eatToken
+        if C_Timer and C_Timer.After then
+            C_Timer.After(SIT_SECONDS, function()
+                -- Only if this sitting's eating buff was never seen; when it
+                -- was, its going is what sends the button back.
+                if token == eatToken and ns.eatStep == "drink" and not eatAura then
+                    ns.SetEatStep("food")
+                end
+            end)
         end
+    elseif CastsItem(spellID, drink) then
+        ns.SetEatStep("food")
+    end
+end
+
+-- UNIT_AURA for the player: notices the eating buff arriving, and going
+-- (standing up, or the food is finished).
+function ns.OnPlayerAura(info)
+    if ns.eatStep ~= "drink" or type(info) ~= "table" then return end
+    if type(info.addedAuras) == "table" then
+        for _, aura in ipairs(info.addedAuras) do
+            if Usable(aura.spellId) and (aura.spellId == eatSpell or (eatName and aura.name == eatName)) then
+                eatAura = aura.auraInstanceID
+            end
+        end
+    end
+    if eatAura and type(info.removedAuraInstanceIDs) == "table" then
+        for _, id in ipairs(info.removedAuraInstanceIDs) do
+            if id == eatAura then
+                ns.SetEatStep("food")
+                return
+            end
+        end
+    end
+end
+
+function ns.EatDrinkBody()
+    local food, drink = ns.FoodAndDrink()
+    if food and drink then
+        if ns.eatStep == "drink" then return UseItem(drink, "drink") end
         return UseItem(food, "food")
     end
     return UseItem(food or drink, "food or drink")
@@ -257,7 +314,7 @@ function ns.List()
         Body = ns.BandageBody, body = ns.BandageBody() }
     list[#list + 1] = { name = "Eat & Drink", general = true, icon = "INV_Misc_Food_15",
         desc = "Eats your best food, then drinks on the next press",
-        how = "Press once to sit down with your best food. Once you are eating, the button turns into your best drink: press again to drink as well, and you keep eating, getting health and mana back together. When you get up it turns back into the food. (Both in one press does not work: the drink cancels the food's short cast.) With only one of them in your bags, it uses that.",
+        how = "Press once to sit down with your best food. As soon as you are eating, the button turns into your best drink: press again to drink as well, and you keep eating. It turns back into the food when you drink, move, stand up or go into combat. Buff food and drink (Well Fed) are left for you to use yourself. With only one of them in your bags, it uses that.",
         Body = ns.EatDrinkBody, body = ns.EatDrinkBody() }
     list[#list + 1] = { name = "Potion", general = true, icon = "INV_Potion_51",
         desc = "Drinks your best healing potion",
