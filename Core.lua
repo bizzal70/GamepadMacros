@@ -278,6 +278,8 @@ frame:SetScript("OnEvent", function(self, event, arg)
                 "GET_ITEM_INFO_RECEIVED" }) do
             pcall(self.RegisterEvent, self, name)
         end
+        -- Sitting down to eat or drink, and getting up: Eat & Drink follows.
+        pcall(self.RegisterUnitEvent, self, "UNIT_AURA", "player")
         ns.UpdateMinimapButton()
     elseif event == "PLAYER_LOGIN" then
         AdoptFromMacroKit()

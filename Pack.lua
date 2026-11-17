@@ -158,14 +158,38 @@ end
 
 function ns.BandageBody() return UseItem(ns.BestBagItem(BANDAGE), "bandage") end
 function ns.PotionBody() return UseItem(ns.BestBagItem(POTION), "healing potion") end
--- Food then drink, one per press. In Forever eating starts with a short
--- cast, and using the drink in the same press cancels it, so only the drink
--- happened (found 2026-11-17). Drinking once already eating keeps both.
--- The sequence starts again with the food after 30 seconds.
+-- Whether the player has the buff an item gives while being used (sitting
+-- down eating or drinking). Looked up by the item's spell, by ID and else by
+-- name; only out of combat, where buffs are not hidden from addons.
+local function Using(itemID)
+    if not (C_UnitAuras and C_Item and C_Item.GetItemSpell) then return false end
+    local ok, name, spellID = pcall(C_Item.GetItemSpell, itemID)
+    if not ok then return false end
+    if type(spellID) == "number" and C_UnitAuras.GetPlayerAuraBySpellID then
+        local okAura, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, spellID)
+        if okAura and aura then return true end
+    end
+    if type(name) == "string" and C_UnitAuras.GetAuraDataBySpellName then
+        local okAura, aura = pcall(C_UnitAuras.GetAuraDataBySpellName, "player", name, "HELPFUL")
+        if okAura and aura then return true end
+    end
+    return false
+end
+
+-- Food first, then drink, one per press, the button showing which comes
+-- next. In Forever eating starts with a short cast, and using the drink in
+-- the same press cancels it, so only the drink happened (found 2026-11-17);
+-- drinking once already eating keeps both. A /castsequence did the two
+-- presses, but its icon did not follow the steps, so instead the macro is
+-- rewritten as you sit down: the food until you are eating, then the drink,
+-- and the food again once you get up (UNIT_AURA).
 function ns.EatDrinkBody()
     local food, drink = ns.BestBagItem(FOOD), ns.BestBagItem(DRINK)
     if food and drink and food ~= drink then
-        return ("#showtooltip\n/castsequence reset=30 item:%d, item:%d"):format(food, drink)
+        if Using(food) and not Using(drink) then
+            return UseItem(drink, "drink")
+        end
+        return UseItem(food, "food")
     end
     return UseItem(food or drink, "food or drink")
 end
@@ -200,7 +224,7 @@ function ns.List()
         Body = ns.BandageBody, body = ns.BandageBody() }
     list[#list + 1] = { name = "Eat & Drink", general = true, icon = "INV_Misc_Food_15",
         desc = "Eats your best food, then drinks on the next press",
-        how = "Press once to sit down with your best food, and again once you are eating to drink your best drink as well: you keep eating, and get health and mana back together. (Both in one press does not work: the drink cancels the food's short cast.) After 30 seconds it starts with the food again. With only one of them in your bags, it uses that.",
+        how = "Press once to sit down with your best food. Once you are eating, the button turns into your best drink: press again to drink as well, and you keep eating, getting health and mana back together. When you get up it turns back into the food. (Both in one press does not work: the drink cancels the food's short cast.) With only one of them in your bags, it uses that.",
         Body = ns.EatDrinkBody, body = ns.EatDrinkBody() }
     list[#list + 1] = { name = "Potion", general = true, icon = "INV_Potion_51",
         desc = "Drinks your best healing potion",

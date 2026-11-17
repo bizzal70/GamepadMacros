@@ -12,6 +12,7 @@ local function Stub()
             assert(not UNKNOWN_EVENTS or not UNKNOWN_EVENTS[ev], "no such event " .. ev)
             self.__events[ev] = true
         end end
+        if k == "RegisterUnitEvent" then return function(self, ev) self.__events[ev] = true end end
         if k == "UnregisterEvent" then return function(self, ev) self.__events[ev] = nil end end
         -- Enough widget behaviour for the window tests to read back.
         if k == "Show" then return function(self) self.__shown = true end end

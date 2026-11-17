@@ -9,7 +9,7 @@ Ready-made macros for playing World of Warcraft: Forever (client 1.60.x) with a 
 | Heal Me | Heals yourself, whatever you have targeted (Holy Light, Lesser Heal or Heal, Healing Touch, Healing Wave; paladins, priests, druids and shamans) |
 | Quest Item | Uses the quest item in your bags: one that starts a quest first, else a quest item you can use. GamepadMacros keeps it pointing at the right item as your bags change |
 | Bandage | Uses your best bandage |
-| Eat & Drink | Eats your best food; press again while eating to drink your best drink too |
+| Eat & Drink | Eats your best food; once you are eating it turns into your best drink, so a second press drinks too |
 | Potion | Drinks your best healing potion |
 | Hearth | Uses your Hearthstone |
 | Save Gear | Saves what you are wearing as the gear set "GamepadMacros" |

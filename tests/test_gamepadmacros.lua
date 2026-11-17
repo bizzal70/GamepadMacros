@@ -122,7 +122,16 @@ ITEM_LEVELS[117], ITEM_LEVELS[4536] = { 5, 1 }, { 15, 5 }
 ITEM_LEVELS[118], ITEM_LEVELS[929] = { 5, 1 }, { 25, 22 }   -- the healing potion needs level 22
 Fire("BAG_UPDATE_DELAYED")
 check(Body("Bandage") == "#showtooltip item:8545\n/use item:8545", "Bandage uses the best bandage")
-check(Body("Eat & Drink") == "#showtooltip\n/castsequence reset=30 item:4536, item:159", "Eat & Drink eats the best food on the first press and drinks the water on the next")
+check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536", "Eat & Drink starts with the best food")
+-- Sitting down to eat: the button turns into the drink; getting up, back to the food.
+AURAS = {}
+C_UnitAuras = { GetAuraDataBySpellName = function(unit, name) return AURAS[name] and { name = name } or nil end }
+AURAS["Food"] = true; Fire("UNIT_AURA", "player")
+check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159", "once eating, the button turns into the drink")
+AURAS["Drink"] = true; Fire("UNIT_AURA", "player")
+check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536", "eating and drinking: back to the food for next time")
+AURAS = {}; Fire("UNIT_AURA", "player")
+check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536", "getting up: the food")
 check(Body("Potion") == "#showtooltip item:118\n/use item:118", "Potion skips one the character is too low to drink")
 BAGS[0][4], BAGS[0][6] = nil, nil
 Fire("BAG_UPDATE_DELAYED")
@@ -142,7 +151,7 @@ Fire("BAG_UPDATE_DELAYED")
 check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159" and requested[2287], "food the game has not loaded yet is asked for")
 ITEM_SPELLS[2287] = "Eating"
 Fire("GET_ITEM_INFO_RECEIVED", 2287, true)
-check(Body("Eat & Drink") == "#showtooltip\n/castsequence reset=30 item:2287, item:159",
+check(Body("Eat & Drink") == "#showtooltip item:2287\n/use item:2287",
     "when it arrives, Eat & Drink eats it too; food is known by its category, not only a spell called Food")
 check(Body("Potion") == "#showtooltip item:118\n/use item:118", "a potion is not taken for food")
 
@@ -150,14 +159,14 @@ check(Body("Potion") == "#showtooltip item:118\n/use item:118", "a potion is not
 -- without saving). A macro in exactly this addon's shape is taken back and
 -- kept up to date; one a player wrote is still left alone.
 ns.db.generalMade["Eat & Drink"] = nil
-MACROS[GetMacroIndexByName("Eat & Drink")].body = "#showtooltip item:159\n/use item:159"
+MACROS[GetMacroIndexByName("Eat & Drink")].body = "#showtooltip\n/castsequence reset=30 item:2287, item:159"   -- from 0.2.2
 Fire("BAG_UPDATE_DELAYED")
-check(ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "#showtooltip\n/castsequence reset=30 item:2287, item:159",
+check(ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "#showtooltip item:2287\n/use item:2287",
     "a macro in GamepadMacros' own shape is recognised again after its record was lost, and updated")
 ns.db.generalMade["Eat & Drink"] = nil
 MACROS[GetMacroIndexByName("Eat & Drink")].body = "#showtooltip item:159\r\n/use item:159\n"   -- as the game may hand it back
 Fire("BAG_UPDATE_DELAYED")
-check(ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "#showtooltip\n/castsequence reset=30 item:2287, item:159",
+check(ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "#showtooltip item:2287\n/use item:2287",
     "a line break or carriage return the game adds after the text does not stop it being recognised")
 SlashCmdList.GAMEPADMACROS("debug")
 ns.db.generalMade["Eat & Drink"] = nil
@@ -171,7 +180,9 @@ Fire("BAG_UPDATE_DELAYED")
 check(Body("Eat & Drink") == "#showtooltip item:2287\n/use item:2287", "out of drinks, it just eats")
 BAGS[0][5] = { itemID = 159 }
 Fire("BAG_UPDATE_DELAYED")
-check(Body("Eat & Drink"):find("castsequence", 1, true), "with drinks again, back to eat then drink")
+AURAS["Nutritious Food"] = true; ITEM_SPELLS[2287] = "Nutritious Food"; Fire("UNIT_AURA", "player")
+check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159", "with drinks again and eating, it turns into the drink")
+AURAS = {}; Fire("UNIT_AURA", "player")
 BAGS[0] = nil
 
 -- A client without gear sets.

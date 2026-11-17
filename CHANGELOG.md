@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.2.5
+
+- Eat & Drink's button now shows what the next press does: your food until you are eating, then your drink, then the food again once you get up. It no longer uses a /castsequence (whose icon did not change) or a 30-second reset, and a second press during the food's short cast can no longer cancel it.
+
 ## 0.2.4
 
 - Fixed: 0.2.3 still did not take back its own macros when the game handed their text back with a line break after it. That is now ignored.
