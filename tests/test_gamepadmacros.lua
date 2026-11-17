@@ -155,6 +155,12 @@ Fire("BAG_UPDATE_DELAYED")
 check(ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "#showtooltip\n/castsequence reset=30 item:2287, item:159",
     "a macro in GamepadMacros' own shape is recognised again after its record was lost, and updated")
 ns.db.generalMade["Eat & Drink"] = nil
+MACROS[GetMacroIndexByName("Eat & Drink")].body = "#showtooltip item:159\r\n/use item:159\n"   -- as the game may hand it back
+Fire("BAG_UPDATE_DELAYED")
+check(ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "#showtooltip\n/castsequence reset=30 item:2287, item:159",
+    "a line break or carriage return the game adds after the text does not stop it being recognised")
+SlashCmdList.GAMEPADMACROS("debug")
+ns.db.generalMade["Eat & Drink"] = nil
 MACROS[GetMacroIndexByName("Eat & Drink")].body = "/use Haunch of Meat\n/say yum"
 Fire("BAG_UPDATE_DELAYED")
 check(not ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "/use Haunch of Meat\n/say yum", "a player's own Eat & Drink is still left alone")

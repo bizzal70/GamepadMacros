@@ -1,5 +1,10 @@
 # GamepadMacros
 
+## 0.2.4
+
+- Fixed: 0.2.3 still did not take back its own macros when the game handed their text back with a line break after it. That is now ignored.
+- `/gpm debug` lists, for each macro that follows your bags, what the game reports and what GamepadMacros wants it to be.
+
 ## 0.2.3
 
 - Fixed: the macros that follow your bags (Eat & Drink, Bandage, Potion, Quest Item) could stop updating for good. GamepadMacros only updates macros it made, and the game only saves that record when it closes normally, so after a crash it forgot them. It now also recognises its own macros by their text, so they update again, while a macro you wrote yourself is still never touched.

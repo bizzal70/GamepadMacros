@@ -156,8 +156,16 @@ local OUR_SHAPES = {
     "^#showtooltip\n/castsequence reset=%d+ item:%d+, item:%d+$",
     '^/run print%("GamepadMacros: no [^"]*"%)$',
 }
+-- The game can hand back a macro's text with a line break (or a carriage
+-- return) after it that was never typed; it is ignored when comparing.
+local function Trim(text)
+    return (text:gsub("\r", ""):gsub("%s+$", ""))
+end
+ns.Trim = Trim
+
 function ns.LooksMade(body)
     if type(body) ~= "string" then return false end
+    body = Trim(body)
     for _, shape in ipairs(OUR_SHAPES) do
         if body:find(shape) then return true end
     end
@@ -180,8 +188,10 @@ function ns.UpdateItemMacros()
                 end
                 if ns.db.generalMade[macro.name] then
                     local body = macro.Body()
-                    if not (okInfo and current == body) then
-                        pcall(EditMacro, index, nil, nil, body)
+                    if not (okInfo and type(current) == "string" and Trim(current) == body) then
+                        local okEdit, problem = pcall(EditMacro, index, nil, nil, body)
+                        ns.lastEdit = ns.lastEdit or {}
+                        ns.lastEdit[macro.name] = okEdit and "edited" or ("refused: " .. tostring(problem))
                     end
                 end
             end
@@ -212,6 +222,23 @@ SlashCmdList.GAMEPADMACROS = function(msg)
         ns.AddAll()
     elseif command == "remove" then
         ns.Remove()
+    elseif command == "debug" then
+        -- What the game reports for each macro that follows the bags.
+        ns.UpdateItemMacros()
+        for _, macro in ipairs(ns.List()) do
+            if macro.Body then
+                local okIndex, index = pcall(GetMacroIndexByName, macro.name)
+                local current
+                if okIndex and type(index) == "number" and index > 0 then
+                    current = select(3, GetMacroInfo(index))
+                end
+                ns.Print(("%s: index %s, made %s, our shape %s, last edit %s"):format(macro.name, tostring(index),
+                    tostring(ns.db.generalMade[macro.name] or false), tostring(ns.LooksMade(current)),
+                    tostring(ns.lastEdit and ns.lastEdit[macro.name] or "none")))
+                ns.Print("  now: " .. (current and ("%q"):format(current) or "none"))
+                ns.Print("  wanted: " .. ("%q"):format(macro.Body()))
+            end
+        end
     elseif command == "button" then
         ns.db.minimapButton = not ns.db.minimapButton
         ns.UpdateMinimapButton()
