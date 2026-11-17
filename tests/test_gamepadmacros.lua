@@ -139,6 +139,15 @@ AURAS["Drink"] = true; Fire("UNIT_AURA", "player")
 check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536", "eating and drinking: back to the food for next time")
 AURAS = {}; Fire("UNIT_AURA", "player")
 check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536", "getting up: the food")
+-- A buff the addon cannot match: finishing the food's cast still counts as eating, for 30 seconds.
+CLOCK = 1000
+GetTime = function() return CLOCK end
+C_Spell.GetSpellName = function(id) return ({ [433] = "Food" })[id] end
+Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast-1", 433)
+check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159", "finishing eating's cast turns the button into the drink, even without a buff to see")
+CLOCK = 1031; Fire("BAG_UPDATE_DELAYED")
+check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536", "and back to the food once the sitting is over")
+SlashCmdList.GAMEPADMACROS("debug")
 check(Body("Potion") == "#showtooltip item:118\n/use item:118", "Potion skips one the character is too low to drink")
 BAGS[0][4], BAGS[0][6] = nil, nil
 Fire("BAG_UPDATE_DELAYED")

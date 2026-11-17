@@ -161,10 +161,38 @@ function ns.PotionBody() return UseItem(ns.BestBagItem(POTION), "healing potion"
 -- Whether the player has the buff an item gives while being used (sitting
 -- down eating or drinking). Looked up by the item's spell, by ID and else by
 -- name; only out of combat, where buffs are not hidden from addons.
+-- Eating or drinking lasts about this long. A food or drink whose use was
+-- cast this recently counts as being used even if its buff cannot be found
+-- (Forever's eating buff may not carry the item's spell name or ID).
+local SIT_SECONDS = 30
+ns.SIT_SECONDS = SIT_SECONDS
+ns.castAt = {}          -- spell name or ID -> when it was last cast
+
+local function Now()
+    return (GetTime and GetTime()) or time()
+end
+
+-- Called for each spell the player finishes casting.
+function ns.NoteCast(spellID)
+    if type(spellID) ~= "number" or (issecretvalue and issecretvalue(spellID)) then return end
+    ns.castAt[spellID] = Now()
+    if C_Spell and C_Spell.GetSpellName then
+        local ok, name = pcall(C_Spell.GetSpellName, spellID)
+        if ok and type(name) == "string" then ns.castAt[name] = Now() end
+    end
+end
+
+local function CastRecently(key)
+    local at = key ~= nil and ns.castAt[key]
+    return at and Now() - at < SIT_SECONDS or false
+end
+
 local function Using(itemID)
-    if not (C_UnitAuras and C_Item and C_Item.GetItemSpell) then return false end
+    if not (C_Item and C_Item.GetItemSpell) then return false end
     local ok, name, spellID = pcall(C_Item.GetItemSpell, itemID)
     if not ok then return false end
+    if CastRecently(spellID) or CastRecently(name) then return true end
+    if not C_UnitAuras then return false end
     if type(spellID) == "number" and C_UnitAuras.GetPlayerAuraBySpellID then
         local okAura, aura = pcall(C_UnitAuras.GetPlayerAuraBySpellID, spellID)
         if okAura and aura then return true end
@@ -183,6 +211,11 @@ end
 -- presses, but its icon did not follow the steps, so instead the macro is
 -- rewritten as you sit down: the food until you are eating, then the drink,
 -- and the food again once you get up (UNIT_AURA).
+ns.Using = Using
+function ns.FoodAndDrink()
+    return ns.BestBagItem(FOOD), ns.BestBagItem(DRINK)
+end
+
 function ns.EatDrinkBody()
     local food, drink = ns.BestBagItem(FOOD), ns.BestBagItem(DRINK)
     if food and drink and food ~= drink then

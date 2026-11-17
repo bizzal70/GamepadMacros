@@ -235,6 +235,22 @@ SlashCmdList.GAMEPADMACROS = function(msg)
     elseif command == "debug" then
         -- What the game reports for each macro that follows the bags.
         ns.UpdateItemMacros()
+        local food, drink = ns.FoodAndDrink()
+        ns.Print(("Food %s (eating: %s), drink %s (drinking: %s)"):format(tostring(food), tostring(food and ns.Using(food)),
+            tostring(drink), tostring(drink and ns.Using(drink))))
+        for _, id in ipairs({ food, drink }) do
+            local ok, name, spellID = pcall(C_Item.GetItemSpell, id)
+            if ok then ns.Print(("  item %d uses spell %s %s"):format(id, tostring(name), tostring(spellID))) end
+        end
+        local buffs = {}
+        if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+            for i = 1, 40 do
+                local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
+                if not (ok and aura) then break end
+                buffs[#buffs + 1] = tostring(aura.name) .. " " .. tostring(aura.spellId)
+            end
+        end
+        ns.Print("Your buffs: " .. (#buffs > 0 and table.concat(buffs, ", ") or "none"))
         for _, macro in ipairs(ns.List()) do
             if macro.Body then
                 local okIndex, index = pcall(GetMacroIndexByName, macro.name)
@@ -266,6 +282,18 @@ function GamepadMacros_OnAddonCompartmentClick()
     ns.ToggleWindow()
 end
 
+-- Finishing the cast of a food or drink: Eat & Drink turns to the other
+-- one at once, and is looked at again once the sitting is over.
+local caster = CreateFrame("Frame")
+caster:SetScript("OnEvent", function(_, _, unit, _, spellID)
+    if not ns.db or InCombatLockdown() then return end
+    pcall(ns.NoteCast, spellID)
+    ns.UpdateItemMacros()
+    if C_Timer and C_Timer.After then
+        C_Timer.After(ns.SIT_SECONDS + 1, function() ns.UpdateItemMacros() end)
+    end
+end)
+
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 frame:SetScript("OnEvent", function(self, event, arg)
@@ -290,6 +318,7 @@ frame:SetScript("OnEvent", function(self, event, arg)
         end
         -- Sitting down to eat or drink, and getting up: Eat & Drink follows.
         pcall(self.RegisterUnitEvent, self, "UNIT_AURA", "player")
+        pcall(caster.RegisterUnitEvent, caster, "UNIT_SPELLCAST_SUCCEEDED", "player")
         ns.UpdateMinimapButton()
     elseif event == "PLAYER_LOGIN" then
         AdoptFromMacroKit()

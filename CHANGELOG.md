@@ -1,5 +1,10 @@
 # GamepadMacros
 
+## 0.2.7
+
+- Eat & Drink turns into your drink as soon as you finish the short cast of eating, even when GamepadMacros cannot recognise Forever's eating buff (before, it could stay on the food, and a second press only said a more powerful spell was already active). It turns back into the food 30 seconds later or when you get up.
+- `/gpm debug` also lists your food, your drink, whether you count as eating or drinking, and your buffs.
+
 ## 0.2.6
 
 - Fixed: the buttons for Eat & Drink, Bandage, Potion and Quest Item kept their fixed picture (Eat & Drink always showed a turkey), whatever item they were set to use. They now have the question-mark icon, which makes the button show the item the macro uses right now: your food, then your drink once you are eating, or your next food when one runs out. Macros added before are switched over by themselves.
