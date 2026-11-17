@@ -158,10 +158,14 @@ end
 
 function ns.BandageBody() return UseItem(ns.BestBagItem(BANDAGE), "bandage") end
 function ns.PotionBody() return UseItem(ns.BestBagItem(POTION), "healing potion") end
+-- Food then drink, one per press. In Forever eating starts with a short
+-- cast, and using the drink in the same press cancels it, so only the drink
+-- happened (found 2026-11-17). Drinking once already eating keeps both.
+-- The sequence starts again with the food after 30 seconds.
 function ns.EatDrinkBody()
     local food, drink = ns.BestBagItem(FOOD), ns.BestBagItem(DRINK)
     if food and drink and food ~= drink then
-        return ("#showtooltip item:%d\n/use item:%d\n/use item:%d"):format(food, food, drink)
+        return ("#showtooltip\n/castsequence reset=30 item:%d, item:%d"):format(food, drink)
     end
     return UseItem(food or drink, "food or drink")
 end
@@ -195,8 +199,8 @@ function ns.List()
         how = "Uses the best bandage in your bags that you can use. GamepadMacros keeps the macro on your best one as your bags change (outside combat).",
         Body = ns.BandageBody, body = ns.BandageBody() }
     list[#list + 1] = { name = "Eat & Drink", general = true, icon = "INV_Misc_Food_15",
-        desc = "Eats and drinks your best food and water at once",
-        how = "Sits down with your best food and your best drink in one press, to get health and mana back together. With only one of them in your bags, it uses that.",
+        desc = "Eats your best food, then drinks on the next press",
+        how = "Press once to sit down with your best food, and again once you are eating to drink your best drink as well: you keep eating, and get health and mana back together. (Both in one press does not work: the drink cancels the food's short cast.) After 30 seconds it starts with the food again. With only one of them in your bags, it uses that.",
         Body = ns.EatDrinkBody, body = ns.EatDrinkBody() }
     list[#list + 1] = { name = "Potion", general = true, icon = "INV_Potion_51",
         desc = "Drinks your best healing potion",

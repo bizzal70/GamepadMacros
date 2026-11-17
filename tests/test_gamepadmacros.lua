@@ -121,7 +121,7 @@ ITEM_LEVELS[117], ITEM_LEVELS[4536] = { 5, 1 }, { 15, 5 }
 ITEM_LEVELS[118], ITEM_LEVELS[929] = { 5, 1 }, { 25, 22 }   -- the healing potion needs level 22
 Fire("BAG_UPDATE_DELAYED")
 check(Body("Bandage") == "#showtooltip item:8545\n/use item:8545", "Bandage uses the best bandage")
-check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536\n/use item:159", "Eat & Drink eats the best food and drinks the water in one press")
+check(Body("Eat & Drink") == "#showtooltip\n/castsequence reset=30 item:4536, item:159", "Eat & Drink eats the best food on the first press and drinks the water on the next")
 check(Body("Potion") == "#showtooltip item:118\n/use item:118", "Potion skips one the character is too low to drink")
 BAGS[0][4], BAGS[0][6] = nil, nil
 Fire("BAG_UPDATE_DELAYED")
@@ -141,7 +141,7 @@ Fire("BAG_UPDATE_DELAYED")
 check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159" and requested[2287], "food the game has not loaded yet is asked for")
 ITEM_SPELLS[2287] = "Eating"
 Fire("GET_ITEM_INFO_RECEIVED", 2287, true)
-check(Body("Eat & Drink") == "#showtooltip item:2287\n/use item:2287\n/use item:159",
+check(Body("Eat & Drink") == "#showtooltip\n/castsequence reset=30 item:2287, item:159",
     "when it arrives, Eat & Drink eats it too; food is known by its category, not only a spell called Food")
 check(Body("Potion") == "#showtooltip item:118\n/use item:118", "a potion is not taken for food")
 BAGS[0] = nil

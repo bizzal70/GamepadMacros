@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.2.2
+
+- Eat & Drink now takes two presses: the first eats your best food, the second drinks your best drink while you keep eating. In Forever, eating starts with a short cast, and drinking in the same press cancelled it, so you only drank. After 30 seconds it starts with the food again.
+
 ## 0.2.1
 
 - Fixed: Eat & Drink could miss your food and only drink. Food is now recognised by the game's Food & Drink item category, not only by a use called "Food", and food the game has not finished loading when you log in is picked up as soon as it arrives.
