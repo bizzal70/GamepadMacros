@@ -144,19 +144,45 @@ function ns.Made(name)
     return (ns.char and ns.char.made[name]) or (ns.db and ns.db.generalMade[name]) or false
 end
 
+-- Whether a macro's text has exactly the shape this addon writes for the
+-- macros that use something from the bags. Used to recognise our own macro
+-- when the record that we made it has been lost: saved settings are only
+-- written when the game closes normally, so after a crash the macro exists
+-- but the record does not, and it was never kept up to date again (Eat &
+-- Drink stuck on water only, found 2026-11-17).
+local OUR_SHAPES = {
+    "^#showtooltip item:%d+\n/use item:%d+$",
+    "^#showtooltip item:%d+\n/use item:%d+\n/use item:%d+$",
+    "^#showtooltip\n/castsequence reset=%d+ item:%d+, item:%d+$",
+    '^/run print%("GamepadMacros: no [^"]*"%)$',
+}
+function ns.LooksMade(body)
+    if type(body) ~= "string" then return false end
+    for _, shape in ipairs(OUR_SHAPES) do
+        if body:find(shape) then return true end
+    end
+    return false
+end
+
 -- Keeps the macros that use something from the bags (Quest Item, Bandage,
--- Eat & Drink, Potion) on the right item. Only touches a macro this addon
--- made, and never in combat (the game does not allow it).
+-- Eat & Drink, Potion) on the right item, whenever the bags change. Only
+-- touches a macro this addon made (or one in exactly its shape), and never
+-- in combat (the game does not allow it).
 function ns.UpdateItemMacros()
     if InCombatLockdown() or not ns.db then return end
     for _, macro in ipairs(ns.List()) do
-        if macro.Body and ns.db.generalMade[macro.name] then
+        if macro.Body then
             local ok, index = pcall(GetMacroIndexByName, macro.name)
             if ok and type(index) == "number" and index > 0 then
-                local body = macro.Body()
                 local okInfo, _, _, current = pcall(GetMacroInfo, index)
-                if not (okInfo and current == body) then
-                    pcall(EditMacro, index, nil, nil, body)
+                if not ns.db.generalMade[macro.name] and okInfo and ns.LooksMade(current) then
+                    ns.db.generalMade[macro.name] = true
+                end
+                if ns.db.generalMade[macro.name] then
+                    local body = macro.Body()
+                    if not (okInfo and current == body) then
+                        pcall(EditMacro, index, nil, nil, body)
+                    end
                 end
             end
         end

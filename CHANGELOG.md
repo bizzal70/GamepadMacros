@@ -1,5 +1,10 @@
 # GamepadMacros
 
+## 0.2.3
+
+- Fixed: the macros that follow your bags (Eat & Drink, Bandage, Potion, Quest Item) could stop updating for good. GamepadMacros only updates macros it made, and the game only saves that record when it closes normally, so after a crash it forgot them. It now also recognises its own macros by their text, so they update again, while a macro you wrote yourself is still never touched.
+- Hovering over a macro in the window now shows the macro as it really is in your macro list.
+
 ## 0.2.2
 
 - Eat & Drink now takes two presses: the first eats your best food, the second drinks your best drink while you keep eating. In Forever, eating starts with a short cast, and drinking in the same press cancelled it, so you only drank. After 30 seconds it starts with the food again.

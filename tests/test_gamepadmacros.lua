@@ -93,9 +93,10 @@ IN_COMBAT = false
 Fire("PLAYER_REGEN_ENABLED")
 check(Body("Quest Item"):find("item:5000", 1, true), "and brought up to date when combat ends")
 ns.db.generalMade["Quest Item"] = nil
+MACROS[GetMacroIndexByName("Quest Item")].body = "/use item:5000\n/say quest!"   -- written by the player
 BAGS[1] = nil
 Fire("BAG_UPDATE_DELAYED")
-check(Body("Quest Item"):find("item:5000", 1, true), "a Quest Item macro this addon did not make is left alone")
+check(Body("Quest Item") == "/use item:5000\n/say quest!", "a Quest Item macro this addon did not make is left alone")
 ns.db.generalMade["Quest Item"] = true
 
 -- Bandage, Eat & Drink and Potion follow the bags too, picking the best
@@ -144,6 +145,27 @@ Fire("GET_ITEM_INFO_RECEIVED", 2287, true)
 check(Body("Eat & Drink") == "#showtooltip\n/castsequence reset=30 item:2287, item:159",
     "when it arrives, Eat & Drink eats it too; food is known by its category, not only a spell called Food")
 check(Body("Potion") == "#showtooltip item:118\n/use item:118", "a potion is not taken for food")
+
+-- The record that a macro was made here can be lost (the game closed
+-- without saving). A macro in exactly this addon's shape is taken back and
+-- kept up to date; one a player wrote is still left alone.
+ns.db.generalMade["Eat & Drink"] = nil
+MACROS[GetMacroIndexByName("Eat & Drink")].body = "#showtooltip item:159\n/use item:159"
+Fire("BAG_UPDATE_DELAYED")
+check(ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "#showtooltip\n/castsequence reset=30 item:2287, item:159",
+    "a macro in GamepadMacros' own shape is recognised again after its record was lost, and updated")
+ns.db.generalMade["Eat & Drink"] = nil
+MACROS[GetMacroIndexByName("Eat & Drink")].body = "/use Haunch of Meat\n/say yum"
+Fire("BAG_UPDATE_DELAYED")
+check(not ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "/use Haunch of Meat\n/say yum", "a player's own Eat & Drink is still left alone")
+ns.db.generalMade["Eat & Drink"] = true
+-- Running out of drink: the macro switches to the food alone, and back.
+BAGS[0][5] = nil
+Fire("BAG_UPDATE_DELAYED")
+check(Body("Eat & Drink") == "#showtooltip item:2287\n/use item:2287", "out of drinks, it just eats")
+BAGS[0][5] = { itemID = 159 }
+Fire("BAG_UPDATE_DELAYED")
+check(Body("Eat & Drink"):find("castsequence", 1, true), "with drinks again, back to eat then drink")
 BAGS[0] = nil
 
 -- A client without gear sets.

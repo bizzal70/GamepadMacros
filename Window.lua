@@ -87,7 +87,13 @@ local function ShowTooltip(row)
     GameTooltip:AddLine(macro.name)
     GameTooltip:AddLine(macro.how or macro.desc, 1, 1, 1, true)
     GameTooltip:AddLine(" ")
+    -- The macro as it really is in the macro list; what it would be if not added yet.
     local body = macro.Body and macro.Body() or macro.body
+    local okIndex, index = pcall(GetMacroIndexByName, macro.name)
+    if okIndex and type(index) == "number" and index > 0 then
+        local okInfo, _, _, current = pcall(GetMacroInfo, index)
+        if okInfo and type(current) == "string" then body = current end
+    end
     for line in (body .. "\n"):gmatch("(.-)\n") do
         GameTooltip:AddLine(line, 0.6, 0.8, 1)
     end
