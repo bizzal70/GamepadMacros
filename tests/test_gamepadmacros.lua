@@ -21,6 +21,7 @@ C_GamePad = {}
 EditMacro = function(index, name, icon, body)
     assert(not IN_COMBAT, "EditMacro in combat")
     MACROS[index].body = body
+    if icon then MACROS[index].icon = icon end
 end
 local function Body(name) return MACROS[GetMacroIndexByName(name)].body end
 
@@ -123,6 +124,12 @@ ITEM_LEVELS[118], ITEM_LEVELS[929] = { 5, 1 }, { 25, 22 }   -- the healing potio
 Fire("BAG_UPDATE_DELAYED")
 check(Body("Bandage") == "#showtooltip item:8545\n/use item:8545", "Bandage uses the best bandage")
 check(Body("Eat & Drink") == "#showtooltip item:4536\n/use item:4536", "Eat & Drink starts with the best food")
+check(MACROS[GetMacroIndexByName("Eat & Drink")].icon == 134400 and MACROS[GetMacroIndexByName("Bandage")].icon == 134400,
+    "the bag macros have the question-mark icon, so the button shows the item they use")
+-- One made before 0.2.6 with a fixed icon gets the question mark once.
+MACROS[GetMacroIndexByName("Eat & Drink")].icon = "INV_Misc_Food_15"; ns.db.iconSet["Eat & Drink"] = nil
+Fire("BAG_UPDATE_DELAYED")
+check(MACROS[GetMacroIndexByName("Eat & Drink")].icon == 134400 and ns.db.iconSet["Eat & Drink"], "an older fixed icon is switched to the question mark")
 -- Sitting down to eat: the button turns into the drink; getting up, back to the food.
 AURAS = {}
 C_UnitAuras = { GetAuraDataBySpellName = function(unit, name) return AURAS[name] and { name = name } or nil end }

@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.2.6
+
+- Fixed: the buttons for Eat & Drink, Bandage, Potion and Quest Item kept their fixed picture (Eat & Drink always showed a turkey), whatever item they were set to use. They now have the question-mark icon, which makes the button show the item the macro uses right now: your food, then your drink once you are eating, or your next food when one runs out. Macros added before are switched over by themselves.
+
 ## 0.2.5
 
 - Eat & Drink's button now shows what the next press does: your food until you are eating, then your drink, then the food again once you get up. It no longer uses a /castsequence (whose icon did not change) or a 30-second reset, and a second press during the food's short cast can no longer cancel it.

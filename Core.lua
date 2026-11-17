@@ -11,7 +11,8 @@ local accountDefaults = {
     -- Lower right on the rim (radians, 0 = east), clear of the author's
     -- other addons' buttons.
     minimapAngle = -1.2,
-    generalMade = {},    -- name -> true for each account-wide macro this addon added
+    generalMade = {},
+    iconSet = {},        -- name -> true once a bag macro has the question-mark icon    -- name -> true for each account-wide macro this addon added
 }
 local charDefaults = {
     made = {},           -- name -> true for each character macro this addon added (Heal Me)
@@ -74,13 +75,17 @@ function ns.AddOne(macro, quiet)
         return false
     end
     local body = macro.Body and macro.Body() or macro.body
-    local ok, index = pcall(CreateMacro, macro.name, macro.icon or ICON, body, not macro.general)
+    -- A macro that follows the bags gets the question mark, so its button
+    -- shows the item it uses now (a fixed icon hides #showtooltip's).
+    local icon = macro.Body and ICON or macro.icon or ICON
+    local ok, index = pcall(CreateMacro, macro.name, icon, body, not macro.general)
     if not (ok and index) and macro.icon then
         -- An icon this client does not know: the question mark instead.
         ok, index = pcall(CreateMacro, macro.name, ICON, body, not macro.general)
     end
     if ok and index then
         if macro.general then ns.db.generalMade[macro.name] = true else ns.char.made[macro.name] = true end
+        if macro.Body then ns.db.iconSet[macro.name] = true end
         if not quiet then ns.Print("Added " .. macro.name .. ". Drag it from the window or /macro to your bars.") end
         ns.RefreshWindow()
         return true
@@ -188,8 +193,13 @@ function ns.UpdateItemMacros()
                 end
                 if ns.db.generalMade[macro.name] then
                     local body = macro.Body()
-                    if not (okInfo and type(current) == "string" and Trim(current) == body) then
-                        local okEdit, problem = pcall(EditMacro, index, nil, nil, body)
+                    -- Macros made before 0.2.6 have a fixed icon (Eat & Drink kept
+                    -- showing a turkey whatever it used): switch to the question
+                    -- mark once, so the button shows the item.
+                    local icon = not ns.db.iconSet[macro.name] and ICON or nil
+                    if icon or not (okInfo and type(current) == "string" and Trim(current) == body) then
+                        local okEdit, problem = pcall(EditMacro, index, nil, icon, body)
+                        if okEdit and icon then ns.db.iconSet[macro.name] = true end
                         ns.lastEdit = ns.lastEdit or {}
                         ns.lastEdit[macro.name] = okEdit and "edited" or ("refused: " .. tostring(problem))
                     end
