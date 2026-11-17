@@ -221,7 +221,8 @@ frame:SetScript("OnEvent", function(self, event, arg)
         self:UnregisterEvent("ADDON_LOADED")
         -- Registering an event this client does not have throws, hence pcall.
         for _, name in ipairs({ "PLAYER_LOGIN", "GAME_PAD_ACTIVE_CHANGED", "BAG_UPDATE_DELAYED", "QUEST_ACCEPTED",
-                "QUEST_REMOVED", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "UPDATE_MACROS", "SPELLS_CHANGED" }) do
+                "QUEST_REMOVED", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "UPDATE_MACROS", "SPELLS_CHANGED",
+                "GET_ITEM_INFO_RECEIVED" }) do
             pcall(self.RegisterEvent, self, name)
         end
         ns.UpdateMinimapButton()
@@ -238,7 +239,8 @@ frame:SetScript("OnEvent", function(self, event, arg)
     elseif event == "PLAYER_REGEN_DISABLED" or event == "UPDATE_MACROS" or event == "SPELLS_CHANGED" then
         ns.RefreshWindow()
     else
-        -- Bags, quests, or combat over: the quest item may have changed.
+        -- Bags, quests, combat over, or an item's details arriving: the
+        -- items the macros use may have changed.
         ns.UpdateItemMacros()
         ns.RefreshWindow()
     end

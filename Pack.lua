@@ -79,11 +79,24 @@ function ns.QuestItemID()
     return usable
 end
 
--- The best item in the bags whose use is one of the spells named (an
--- item's use is a spell: bandages cast "First Aid", food "Food", water
--- "Drink", both at once "Refreshment", healing potions "Healing Potion").
+-- Whether the item is in the game's Food & Drink category (consumable
+-- class 0, subclass 5). Read without the item's details being loaded.
+local function IsFoodOrDrink(id)
+    if not (C_Item and C_Item.GetItemInfoInstant) then return false end
+    local ok, _, _, _, _, _, classID, subclassID = pcall(C_Item.GetItemInfoInstant, id)
+    return ok and classID == 0 and subclassID == 5
+end
+
+-- The best item in the bags that matches: either a set of spell names
+-- (an item's use is a spell: bandages cast "First Aid", water "Drink",
+-- healing potions "Healing Potion") or a function(itemID, spellName).
 -- Best: the highest item level the character is high enough to use.
 -- Returns its item ID, or nil.
+--
+-- Until the game has loaded an item's details it reports no spell for it.
+-- Such an item is asked for, and the macros are brought up to date again
+-- when it arrives (GET_ITEM_INFO_RECEIVED). Eat & Drink once missed the
+-- food this way and used only the water (found 2026-11-17).
 function ns.BestBagItem(spells)
     if not (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerItemInfo
             and C_Item and C_Item.GetItemSpell) then
@@ -99,7 +112,18 @@ function ns.BestBagItem(spells)
             local id = okInfo and type(info) == "table" and info.itemID
             if id then
                 local okSpell, spell = pcall(C_Item.GetItemSpell, id)
-                if okSpell and spell and spells[spell] then
+                if not (okSpell and spell) and C_Item.RequestLoadItemDataByID then
+                    pcall(C_Item.RequestLoadItemDataByID, id)
+                end
+                local matches
+                if not okSpell or type(spell) ~= "string" then
+                    matches = false
+                elseif type(spells) == "function" then
+                    matches = spells(id, spell)
+                else
+                    matches = spells[spell]
+                end
+                if matches then
                     local itemLevel, minLevel = 0, 0
                     if C_Item.GetItemInfo then
                         local okItem, _, _, _, level, min = pcall(C_Item.GetItemInfo, id)
@@ -116,8 +140,13 @@ function ns.BestBagItem(spells)
 end
 
 local BANDAGE = { ["First Aid"] = true }
-local FOOD = { ["Food"] = true, ["Refreshment"] = true }
 local DRINK = { ["Drink"] = true, ["Refreshment"] = true }
+-- Food: what casts "Food", or anything in the Food & Drink category that is
+-- not a drink, whatever this client calls eating.
+local function FOOD(id, spell)
+    if spell == "Food" or spell == "Refreshment" then return true end
+    return not DRINK[spell] and IsFoodOrDrink(id)
+end
 local POTION = { ["Healing Potion"] = true }
 local HEARTHSTONE = 6948
 

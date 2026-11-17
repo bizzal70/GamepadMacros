@@ -127,6 +127,23 @@ BAGS[0][4], BAGS[0][6] = nil, nil
 Fire("BAG_UPDATE_DELAYED")
 check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159", "with only a drink left, it uses the drink")
 check(Body("Hearth") == "#showtooltip item:6948\n/use item:6948", "Hearth uses the Hearthstone")
+
+-- Food whose details the game has not loaded yet reports no spell; it is
+-- asked for, and picked up once it arrives. And food is recognised by its
+-- Food & Drink category, whatever the client calls eating.
+CATEGORY = { [2287] = { 0, 5 }, [159] = { 0, 5 }, [118] = { 0, 1 } }
+C_Item.GetItemInfoInstant = function(id) local c = CATEGORY[id]; if c then return id, "Consumable", "Food & Drink", "", 0, c[1], c[2] end end
+local requested = {}
+C_Item.RequestLoadItemDataByID = function(id) requested[id] = true end
+BAGS[0][4] = { itemID = 2287 }       -- haunch of meat, details not loaded yet
+ITEM_LEVELS[2287] = { 15, 5 }
+Fire("BAG_UPDATE_DELAYED")
+check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159" and requested[2287], "food the game has not loaded yet is asked for")
+ITEM_SPELLS[2287] = "Eating"
+Fire("GET_ITEM_INFO_RECEIVED", 2287, true)
+check(Body("Eat & Drink") == "#showtooltip item:2287\n/use item:2287\n/use item:159",
+    "when it arrives, Eat & Drink eats it too; food is known by its category, not only a spell called Food")
+check(Body("Potion") == "#showtooltip item:118\n/use item:118", "a potion is not taken for food")
 BAGS[0] = nil
 
 -- A client without gear sets.
