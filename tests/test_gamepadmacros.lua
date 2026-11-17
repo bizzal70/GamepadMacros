@@ -225,6 +225,25 @@ check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159", "Forever's 
 Fire("PLAYER_STARTED_MOVING")
 BAGS[0] = nil
 
+-- At login every macro this addon made is brought up to date with this
+-- version, but only while it still has the text the addon last gave it.
+local function Fixed(name) return ns.db.written[name] end
+check(Fixed("Leave Group") == Body("Leave Group"), "the text of each macro added is recorded")
+MACROS[GetMacroIndexByName("Leave Group")].body = "/leaveparty"           -- an older version's text
+ns.db.written["Leave Group"] = "/leaveparty"
+MACROS[GetMacroIndexByName("Thanks")].body = "/thank\n/say thanks a lot!" -- the player's own edit
+printed_before = #PRINTED
+Fire("PLAYER_LOGIN")
+check(Body("Leave Group") ~= "/leaveparty" and Fixed("Leave Group") == Body("Leave Group"), "at login, a macro still as an older version wrote it is updated")
+check(Body("Thanks") == "/thank\n/say thanks a lot!", "one the player has edited is left alone")
+check(PRINTED[#PRINTED]:find("Brought 1 of your macros up to date: Leave Group", 1, true), "and it says which were updated: " .. tostring(PRINTED[#PRINTED]))
+-- Logging in during combat: it waits until the fight is over.
+MACROS[GetMacroIndexByName("Leave Group")].body = "/leaveparty"; ns.db.written["Leave Group"] = "/leaveparty"
+IN_COMBAT = true; Fire("PLAYER_LOGIN")
+check(Body("Leave Group") == "/leaveparty", "logging in during combat, nothing is changed then")
+IN_COMBAT = false; Fire("PLAYER_REGEN_ENABLED")
+check(Body("Leave Group") ~= "/leaveparty", "and the update happens when combat ends")
+
 -- A client without gear sets.
 DeleteMacro(GetMacroIndexByName("Save Gear")); ns.db.generalMade["Save Gear"] = nil
 C_EquipmentSet = nil

@@ -11,11 +11,13 @@ local accountDefaults = {
     -- Lower right on the rim (radians, 0 = east), clear of the author's
     -- other addons' buttons.
     minimapAngle = -1.2,
-    generalMade = {},
-    iconSet = {},        -- name -> true once a bag macro has the question-mark icon    -- name -> true for each account-wide macro this addon added
+    generalMade = {},    -- name -> true for each account-wide macro this addon added
+    iconSet = {},        -- name -> true once a bag macro has the question-mark icon
+    written = {},        -- name -> the text this addon last gave each account-wide macro
 }
 local charDefaults = {
     made = {},           -- name -> true for each character macro this addon added (Heal Me)
+    written = {},        -- name -> the text this addon last gave each character macro
 }
 
 function ns.Print(msg)
@@ -86,6 +88,7 @@ function ns.AddOne(macro, quiet)
     if ok and index then
         if macro.general then ns.db.generalMade[macro.name] = true else ns.char.made[macro.name] = true end
         if macro.Body then ns.db.iconSet[macro.name] = true end
+        ns.Written(macro)[macro.name] = body
         if not quiet then ns.Print("Added " .. macro.name .. ". Drag it from the window or /macro to your bars.") end
         ns.RefreshWindow()
         return true
@@ -209,6 +212,61 @@ function ns.UpdateItemMacros()
     end
 end
 
+-- Where the text this addon last gave a macro is kept: account-wide for
+-- General macros, per character for character macros.
+function ns.Written(macro)
+    return macro.general and ns.db.written or ns.char.written
+end
+
+-- Brings the macros that do not follow the bags (Heal Me, Leave Group, the
+-- emotes, the gear sets) up to date with this version of GamepadMacros, so
+-- a change in a later version reaches macros added before it. Checked when
+-- you log in. A macro is only rewritten while it still has exactly the text
+-- this addon last gave it: if you have edited it, it is yours and left
+-- alone. (Macros added before 0.3.1 have no record yet; one that already
+-- matches is recorded now.) Returns the names updated.
+function ns.UpdateFixedMacros()
+    if InCombatLockdown() or not ns.db or not ns.char then return nil end
+    local updated = {}
+    for _, macro in ipairs(ns.List()) do
+        local made = macro.general and ns.db.generalMade[macro.name] or (not macro.general and ns.char.made[macro.name])
+        if not macro.Body and made then
+            local okIndex, index = pcall(GetMacroIndexByName, macro.name)
+            if okIndex and type(index) == "number" and index > 0 then
+                local okInfo, _, _, current = pcall(GetMacroInfo, index)
+                if okInfo and type(current) == "string" then
+                    current = Trim(current)
+                    local written = ns.Written(macro)
+                    if current == macro.body then
+                        written[macro.name] = macro.body
+                    elseif written[macro.name] and current == Trim(written[macro.name]) then
+                        if pcall(EditMacro, index, nil, nil, macro.body) then
+                            written[macro.name] = macro.body
+                            updated[#updated + 1] = macro.name
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return updated
+end
+
+-- At login: every macro this addon made, brought up to date, saying so
+-- when one of the fixed ones changed. In combat it waits until afterwards.
+function ns.UpdateAllMacros()
+    if InCombatLockdown() then
+        ns.updatePending = true
+        return
+    end
+    ns.updatePending = nil
+    ns.UpdateItemMacros()
+    local updated = ns.UpdateFixedMacros()
+    if updated and #updated > 0 then
+        ns.Print(("Brought %d of your macros up to date: %s."):format(#updated, table.concat(updated, ", ")))
+    end
+end
+
 -- MacroKit 0.6.0 to 0.6.2 carried these macros. Ones it added are taken
 -- over, so this addon keeps the quest item up to date and can remove them.
 local function AdoptFromMacroKit()
@@ -316,7 +374,7 @@ frame:SetScript("OnEvent", function(self, event, arg)
         ns.UpdateMinimapButton()
     elseif event == "PLAYER_LOGIN" then
         AdoptFromMacroKit()
-        ns.UpdateItemMacros()
+        ns.UpdateAllMacros()
     elseif event == "GAME_PAD_ACTIVE_CHANGED" then
         -- The first controller button or stick: the minimap button shows
         -- for the rest of the session.
@@ -329,6 +387,7 @@ frame:SetScript("OnEvent", function(self, event, arg)
     else
         -- Bags, quests, combat over, or an item's details arriving: the
         -- items the macros use may have changed.
+        if ns.updatePending then ns.UpdateAllMacros() end
         ns.UpdateItemMacros()
         ns.RefreshWindow()
     end

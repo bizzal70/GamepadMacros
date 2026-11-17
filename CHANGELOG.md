@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.3.1
+
+- When you log in, GamepadMacros checks every macro it added and brings it up to date with the installed version, so improvements in later versions reach macros you added before. It says in chat which ones it updated. A macro you have edited yourself is left as it is.
+
 ## 0.3.0
 
 Eat & Drink, rebuilt around two simple steps:

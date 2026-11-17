@@ -26,7 +26,7 @@ Type `/gpm` (or `/gamepadmacros`), or use the minimap button, which shows once y
 1. In the **Gamepad macros** window, click **Add** on a macro, or **Add all**.
 2. Drag the macro from the window onto a slot on your gamepad's action bar (or click it once to pick it up, then click the slot).
 
-Nothing is added until you ask. A macro you made yourself with the same name is never overwritten. If the game cannot do something (gear sets, for example), that macro says what it needs instead of being added.
+Nothing is added until you ask. A macro you made yourself with the same name is never overwritten. Each time you log in, the macros GamepadMacros added are brought up to date with the version you have installed (it says in chat which ones changed); one you have edited yourself is left alone. If the game cannot do something (gear sets, for example), that macro says what it needs instead of being added.
 
 | Command | What it does |
 |---|---|
