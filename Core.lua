@@ -347,6 +347,15 @@ end)
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
+local itemsArriving = false
+
+-- After bags, quests or items change: the macros that follow the bags.
+local function BringUpToDate()
+    if ns.updatePending then ns.UpdateAllMacros() end
+    ns.UpdateItemMacros()
+    ns.RefreshWindow()
+end
+
 frame:SetScript("OnEvent", function(self, event, arg)
     if event == "ADDON_LOADED" then
         if arg ~= addonName then return end
@@ -391,8 +400,23 @@ frame:SetScript("OnEvent", function(self, event, arg)
     else
         -- Bags, quests, combat over, or an item's details arriving: the
         -- items the macros use may have changed.
-        if ns.updatePending then ns.UpdateAllMacros() end
-        ns.UpdateItemMacros()
-        ns.RefreshWindow()
+        if event == "GET_ITEM_INFO_RECEIVED" then
+            -- Only items this addon asked for; many arrive together (first
+            -- login, first bag opening), so one update for the lot.
+            if not ns.ItemRequested(arg) then return end
+            ns.BagsChanged()
+            if C_Timer and C_Timer.After then
+                if itemsArriving then return end
+                itemsArriving = true
+                C_Timer.After(0.3, function()
+                    itemsArriving = nil
+                    BringUpToDate()
+                end)
+                return
+            end
+        elseif event == "BAG_UPDATE_DELAYED" then
+            ns.BagsChanged()
+        end
+        BringUpToDate()
     end
 end)

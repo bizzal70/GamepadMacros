@@ -189,8 +189,16 @@ BAGS[0][4] = { itemID = 2287 }       -- haunch of meat, details not loaded yet
 ITEM_LEVELS[2287] = { 15, 5 }
 Fire("BAG_UPDATE_DELAYED")
 check(Body("Eat & Drink") == "#showtooltip item:159\n/use item:159" and requested[2287], "food the game has not loaded yet is asked for")
+requested = {}
+Fire("BAG_UPDATE_DELAYED")
+check(requested[2287] == nil, "and only asked for once, not on every bag change")
+Fire("GET_ITEM_INFO_RECEIVED", 999999, true)
+check(#AFTERS == 0, "an item another addon asked for starts nothing")
 ITEM_SPELLS[2287] = "Eating"
 Fire("GET_ITEM_INFO_RECEIVED", 2287, true)
+Fire("GET_ITEM_INFO_RECEIVED", 2287, true)
+check(#AFTERS == 1, "items arriving together bring the macros up to date once")
+for _, fn in ipairs(AFTERS) do fn() end; AFTERS = {}
 check(Body("Eat & Drink") == "#showtooltip item:2287\n/use item:2287",
     "when it arrives, Eat & Drink eats it too; food is known by its category, not only a spell called Food")
 check(Body("Potion") == "#showtooltip item:118\n/use item:118", "a potion is not taken for food")

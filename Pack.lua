@@ -104,6 +104,68 @@ local function IsFoodOrDrink(id)
     return ok and classID == 0 and subclassID == 5
 end
 
+-- What is in the bags that has a use: { { id =, spell =, level =, min = } },
+-- one entry per kind of item. Read once and kept until the bags change or an
+-- item's details arrive, so the macros (which each look for their best item)
+-- do not each walk every bag slot. Before 0.3.8 every bag change walked them
+-- about ten times over and asked the game to load every item without a use
+-- (most items), each arrival starting it all again: heavy lag on the first
+-- bag opening after logging in (reported on CurseForge, 2026-11-18).
+local snapshot
+local requested = {}   -- item IDs whose details this addon asked the game for
+
+-- Forget the bags as read: they changed, or an item's details arrived.
+function ns.BagsChanged()
+    snapshot = nil
+end
+
+-- Whether this addon asked the game for this item's details.
+function ns.ItemRequested(id)
+    return id ~= nil and requested[id] == true
+end
+
+local function Snapshot()
+    if snapshot then return snapshot end
+    snapshot = {}
+    if not (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerItemInfo
+            and C_Item and C_Item.GetItemSpell) then
+        return snapshot
+    end
+    local seen = {}
+    for bag = 0, 4 do
+        local okSlots, slots = pcall(C_Container.GetContainerNumSlots, bag)
+        for slot = 1, (okSlots and type(slots) == "number") and slots or 0 do
+            local okInfo, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
+            local id = okInfo and type(info) == "table" and info.itemID
+            if id and not seen[id] then
+                seen[id] = true
+                local okSpell, spell = pcall(C_Item.GetItemSpell, id)
+                if okSpell and type(spell) == "string" then
+                    local itemLevel, minLevel = 0, 0
+                    if C_Item.GetItemInfo then
+                        local okItem, _, _, _, level, min = pcall(C_Item.GetItemInfo, id)
+                        if okItem then itemLevel, minLevel = tonumber(level) or 0, tonumber(min) or 0 end
+                    end
+                    snapshot[#snapshot + 1] = { id = id, spell = spell, level = itemLevel, min = minLevel }
+                elseif not requested[id] and C_Item.RequestLoadItemDataByID then
+                    -- No use known: either it has none, or the game has not
+                    -- loaded the item yet. Ask once, and only if not loaded.
+                    local cached = false
+                    if C_Item.IsItemDataCachedByID then
+                        local okCached, isCached = pcall(C_Item.IsItemDataCachedByID, id)
+                        cached = okCached and isCached == true
+                    end
+                    if not cached then
+                        requested[id] = true
+                        pcall(C_Item.RequestLoadItemDataByID, id)
+                    end
+                end
+            end
+        end
+    end
+    return snapshot
+end
+
 -- The best item in the bags that matches: either a set of spell names
 -- (an item's use is a spell: bandages cast "First Aid", water "Drink",
 -- healing potions "Healing Potion") or a function(itemID, spellName).
@@ -115,42 +177,18 @@ end
 -- when it arrives (GET_ITEM_INFO_RECEIVED). Eat & Drink once missed the
 -- food this way and used only the water (found 2026-11-17).
 function ns.BestBagItem(spells)
-    if not (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerItemInfo
-            and C_Item and C_Item.GetItemSpell) then
-        return nil
-    end
     local okLevel, myLevel = pcall(UnitLevel, "player")
     myLevel = (okLevel and type(myLevel) == "number") and myLevel or 100
     local best, bestLevel
-    for bag = 0, 4 do
-        local okSlots, slots = pcall(C_Container.GetContainerNumSlots, bag)
-        for slot = 1, (okSlots and type(slots) == "number") and slots or 0 do
-            local okInfo, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
-            local id = okInfo and type(info) == "table" and info.itemID
-            if id then
-                local okSpell, spell = pcall(C_Item.GetItemSpell, id)
-                if not (okSpell and spell) and C_Item.RequestLoadItemDataByID then
-                    pcall(C_Item.RequestLoadItemDataByID, id)
-                end
-                local matches
-                if not okSpell or type(spell) ~= "string" then
-                    matches = false
-                elseif type(spells) == "function" then
-                    matches = spells(id, spell)
-                else
-                    matches = spells[spell]
-                end
-                if matches then
-                    local itemLevel, minLevel = 0, 0
-                    if C_Item.GetItemInfo then
-                        local okItem, _, _, _, level, min = pcall(C_Item.GetItemInfo, id)
-                        if okItem then itemLevel, minLevel = tonumber(level) or 0, tonumber(min) or 0 end
-                    end
-                    if minLevel <= myLevel and (not bestLevel or itemLevel > bestLevel) then
-                        best, bestLevel = id, itemLevel
-                    end
-                end
-            end
+    for _, item in ipairs(Snapshot()) do
+        local matches
+        if type(spells) == "function" then
+            matches = spells(item.id, item.spell)
+        else
+            matches = spells[item.spell]
+        end
+        if matches and item.min <= myLevel and (not bestLevel or item.level > bestLevel) then
+            best, bestLevel = item.id, item.level
         end
     end
     return best

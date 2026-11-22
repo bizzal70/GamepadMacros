@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.3.8
+
+- **Fixed lag when opening your bags**, worst on the first opening after logging in (thanks SaltyBob for the report). Each bag change used to read every bag slot about ten times over and ask the game to load every item without a use, which then started it all again as each item arrived. Now the bags are read once and kept until they change, an item is asked for only once and only if the game has not loaded it, and a burst of arriving items brings the macros up to date once.
+
 ## 0.3.7
 
 - **Heal Me heals your friend too.** With a friendly player targeted, it heals them; otherwise it heals you, including with nothing or an enemy targeted (your target stays on the enemy) or a dead friend targeted. A Heal Me you have not edited is updated by itself when you log in.
