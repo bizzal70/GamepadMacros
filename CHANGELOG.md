@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.3.3
+
+- **The window now sizes itself to its text.** Each time it opens, every name, description, status and button is measured, and the rows, buttons and window are made as big as their text needs, so nothing overlaps whatever text size, font or screen you play with (a handheld like the Legion Go or Steam Deck included). Long descriptions wrap onto a second line, the bottom buttons stack if they do not fit side by side, and if the window would still be taller or wider than your screen it is scaled down to fit.
+
 ## 0.3.2
 
 - **Controller:** the B button now closes GamepadMacros's window, like the X and Escape. While one is open, B closes it; once it is closed, B does whatever you have it set to again.

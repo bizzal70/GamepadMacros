@@ -268,6 +268,20 @@ check(#shown == 13, "it lists every macro: " .. table.concat(shown, ","))
 local saveRow
 for _, f in ipairs(Frames()) do if rawget(f, "macro") and f.macro.name == "Save Gear" then saveRow = f end end
 check(saveRow.status.__text:find("Needs gear sets", 1, true) and not saveRow.add.__shown, "a waiting macro says what it needs")
+-- The window fits its text: bigger text makes it wider, and a small screen scales it down.
+do
+    local width1, height1, scale1 = ns.LayoutWindow()
+    check(width1 == 440 and scale1 == 1 and height1 > 13 * 28, "at the usual text size it is 440 wide, every row with room: " .. width1 .. " x " .. height1)
+    GameFontHighlight = { GetFont = function() return "font", 20 end }
+    local width2, height2 = ns.LayoutWindow()
+    check(width2 > width1 and height2 > height1, "with bigger text the window grows to fit it: " .. width2 .. " x " .. height2)
+    UIParent.GetWidth = function() return 800 end
+    UIParent.GetHeight = function() return 400 end
+    local width3, height3, scale3 = ns.LayoutWindow()
+    check(scale3 < 1 and height3 * scale3 <= 400 * 0.92 + 0.5 and width3 * scale3 <= 800, "taller than the screen, it is scaled down to fit: " .. scale3)
+    GameFontHighlight, UIParent.GetWidth, UIParent.GetHeight = nil, nil, nil
+    ns.LayoutWindow()
+end
 mb.__scripts.OnClick(mb)
 check(not GamepadMacrosWindow:IsShown(), "the minimap button toggles the window")
 GamepadMacros_OnAddonCompartmentClick()
