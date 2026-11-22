@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.3.4
+
+- **Heal Me casts your best rank.** In Forever, casting a heal by name alone casts Rank 1. Heal Me now names your highest learned rank ("/cast [@player] Lesser Heal(Rank 3)"), followed by the name alone in case a rank is not accepted. When you learn a new rank, Heal Me moves up to it by itself, and chat says so. A Heal Me you have edited yourself is left alone.
+
 ## 0.3.3
 
 - **The window now sizes itself to its text.** Each time it opens, every name, description, status and button is measured, and the rows, buttons and window are made as big as their text needs, so nothing overlaps whatever text size, font or screen you play with (a handheld like the Legion Go or Steam Deck included). Long descriptions wrap onto a second line, the bottom buttons stack if they do not fit side by side, and if the window would still be taller or wider than your screen it is scaled down to fit.

@@ -32,14 +32,61 @@ function ns.ControllerInUse()
     return ns.controllerUsed
 end
 
--- The heal each class can cast on itself, from level 1. A priest learns
--- Heal later: the first line casts it once known, else Lesser Heal goes off.
+-- The heal each class can cast on itself, from level 1, best first. A
+-- priest learns Heal later: its line casts it once known, else Lesser Heal
+-- goes off.
 local HEALS = {
-    PALADIN = { spell = "Holy Light", body = "#showtooltip Holy Light\n/cast [@player] Holy Light" },
-    PRIEST = { spell = "Lesser Heal", body = "#showtooltip\n/cast [@player] Heal\n/cast [@player] Lesser Heal" },
-    DRUID = { spell = "Healing Touch", body = "#showtooltip Healing Touch\n/cast [@player] Healing Touch" },
-    SHAMAN = { spell = "Healing Wave", body = "#showtooltip Healing Wave\n/cast [@player] Healing Wave" },
+    PALADIN = { spell = "Holy Light", casts = { "Holy Light" } },
+    PRIEST = { spell = "Lesser Heal", casts = { "Heal", "Lesser Heal" } },
+    DRUID = { spell = "Healing Touch", casts = { "Healing Touch" } },
+    SHAMAN = { spell = "Healing Wave", casts = { "Healing Wave" } },
 }
+
+-- The highest rank of a spell this character has learned, from the
+-- spellbook ("Rank 3"); nil if the spellbook shows no ranks for it. Forever
+-- lists every rank, and /cast with the name alone cast Rank 1 (seen
+-- 2026-11-22: Lesser Heal Rank 1, 2 and 3 in a priest's spellbook).
+function ns.BestRank(name)
+    local book = C_SpellBook
+    if not (book and book.GetSpellBookItemName) then return nil end
+    local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or 0
+    local future = Enum and Enum.SpellBookItemType and Enum.SpellBookItemType.FutureSpell
+    local best, gap = nil, 0
+    for index = 1, 1000 do
+        local ok, found, sub = pcall(book.GetSpellBookItemName, index, bank)
+        if not ok or type(found) ~= "string" then
+            -- Past the end of the spellbook.
+            gap = gap + 1
+            if gap > 30 then break end
+        else
+            gap = 0
+            if found == name then
+                local learned = true
+                if future and book.GetSpellBookItemInfo then
+                    local okInfo, info = pcall(book.GetSpellBookItemInfo, index, bank)
+                    if okInfo and type(info) == "table" and info.itemType == future then learned = false end
+                end
+                local rank = type(sub) == "string" and tonumber(sub:match("(%d+)")) or nil
+                if learned and rank and (not best or rank > best) then best = rank end
+            end
+        end
+    end
+    return best
+end
+
+-- Heal Me's text: each heal at its best rank, then by name alone in case
+-- this game does not take the rank in a macro.
+function ns.HealBody(heal)
+    local lines = { "#showtooltip" }
+    for _, spell in ipairs(heal.casts) do
+        local rank = ns.BestRank(spell)
+        if rank then lines[#lines + 1] = ("/cast [@player] %s(Rank %d)"):format(spell, rank) end
+    end
+    for _, spell in ipairs(heal.casts) do
+        lines[#lines + 1] = "/cast [@player] " .. spell
+    end
+    return table.concat(lines, "\n")
+end
 
 local function NoGearSets()
     if not (C_EquipmentSet and C_EquipmentSet.CreateEquipmentSet and C_EquipmentSet.SaveEquipmentSet
@@ -301,8 +348,8 @@ function ns.List()
     local heal = HEALS[class]
     if heal then
         list[#list + 1] = { name = "Heal Me", desc = heal.spell .. " on yourself, whatever you have targeted",
-            how = "Heals you, without changing your target and without aiming at your own frame. It always heals you, even with a friend targeted.",
-            spells = { heal.spell }, body = heal.body }
+            how = "Heals you with your best rank, without changing your target and without aiming at your own frame. It always heals you, even with a friend targeted. When you learn a new rank, the macro is updated to it (unless you have edited it).",
+            spells = { heal.spell }, body = ns.HealBody(heal) }
     end
     list[#list + 1] = { name = ns.QUEST_ITEM, general = true, icon = "INV_Misc_Note_06",
         desc = "Uses the quest item in your bags",

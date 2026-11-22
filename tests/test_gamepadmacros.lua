@@ -74,6 +74,31 @@ local account, character = GetNumMacros()
 check(character == charBefore + 1, "only Heal Me takes a character macro slot")
 check(account == 12, "the other twelve are account-wide General macros")
 check(Body("Heal Me"):find("/cast [@player] Holy Light", 1, true), "Heal Me heals yourself with the paladin's heal")
+-- Heal Me names the best rank learned, from the spellbook.
+local BOOK = { { "Holy Light", "Rank 1" }, { "Flash of Light", "Rank 1" }, { "Holy Light", "Rank 2" }, { "Holy Light", "Rank 3", future = true } }
+Enum = Enum or {}
+Enum.SpellBookItemType = { Spell = 1, FutureSpell = 2 }
+Enum.SpellBookSpellBank = { Player = 0 }
+C_SpellBook = {
+    GetSpellBookItemName = function(index) local s = BOOK[index]; if s then return s[1], s[2] end end,
+    GetSpellBookItemInfo = function(index) local s = BOOK[index]; return s and { itemType = s.future and 2 or 1 } end,
+}
+check(ns.BestRank("Holy Light") == 2 and ns.BestRank("Lesser Heal") == nil, "the best rank learned is found, not one still to learn")
+Fire("SPELLS_CHANGED")
+check(Body("Heal Me"):find("/cast [@player] Holy Light(Rank 2)\n/cast [@player] Holy Light", 1, true) ~= nil,
+    "Heal Me casts the best rank, with the name alone after it: " .. Body("Heal Me"))
+check(PRINTED[#PRINTED]:find("up to date: Heal Me", 1, true) ~= nil, "and says it was brought up to date")
+BOOK[4].future = nil
+Fire("SPELLS_CHANGED")
+check(Body("Heal Me"):find("Holy Light(Rank 3)", 1, true) ~= nil, "learning a new rank moves Heal Me up to it")
+local healIndex = GetMacroIndexByName("Heal Me")
+MACROS[healIndex].body = "#showtooltip\n/cast Holy Light(Rank 1)"
+BOOK[5] = { "Holy Light", "Rank 4" }
+Fire("SPELLS_CHANGED")
+check(Body("Heal Me") == "#showtooltip\n/cast Holy Light(Rank 1)", "a Heal Me you have edited yourself is left alone")
+C_SpellBook, BOOK = nil, nil
+MACROS[healIndex].body = ns.List()[1].body
+ns.char.written["Heal Me"] = ns.List()[1].body
 SlashCmdList.GAMEPADMACROS("add")
 check(GetNumMacros() == 12, "asking again adds nothing twice")
 

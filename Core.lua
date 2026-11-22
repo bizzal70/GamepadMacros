@@ -382,7 +382,11 @@ frame:SetScript("OnEvent", function(self, event, arg)
             ns.controllerUsed = true
             ns.UpdateMinimapButton()
         end
-    elseif event == "PLAYER_REGEN_DISABLED" or event == "UPDATE_MACROS" or event == "SPELLS_CHANGED" then
+    elseif event == "SPELLS_CHANGED" then
+        -- A new rank learned: Heal Me moves up to it.
+        if ns.db and ns.char and not InCombatLockdown() then ns.UpdateAllMacros() end
+        ns.RefreshWindow()
+    elseif event == "PLAYER_REGEN_DISABLED" or event == "UPDATE_MACROS" then
         ns.RefreshWindow()
     else
         -- Bags, quests, combat over, or an item's details arriving: the
