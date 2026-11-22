@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.3.7
+
+- **Heal Me heals your friend too.** With a friendly player targeted, it heals them; otherwise it heals you, including with nothing or an enemy targeted (your target stays on the enemy) or a dead friend targeted. A Heal Me you have not edited is updated by itself when you log in.
+
 ## 0.3.6
 
 - Heal Me names the heal without a rank again ("/cast [@player] Lesser Heal"). Forever's combat log shows that casting a spell by name already casts your highest rank, so the rank is not needed.

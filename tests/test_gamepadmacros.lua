@@ -73,8 +73,8 @@ for _, name in ipairs(names) do check(Has(name), name .. " is added by /gpm add"
 local account, character = GetNumMacros()
 check(character == charBefore + 1, "only Heal Me takes a character macro slot")
 check(account == 12, "the other twelve are account-wide General macros")
-check(Body("Heal Me"):find("/cast [@player] Holy Light", 1, true), "Heal Me heals yourself with the paladin's heal")
-check(Body("Heal Me") == "#showtooltip\n/cast [@player] Holy Light", "Heal Me is one line, the heal by name (the game casts the best rank)")
+check(Body("Heal Me") == "#showtooltip\n/cast [help,nodead][@player] Holy Light",
+    "Heal Me heals a friend you have targeted, else yourself, with the paladin's heal by name: " .. Body("Heal Me"))
 SlashCmdList.GAMEPADMACROS("add")
 check(GetNumMacros() == 12, "asking again adds nothing twice")
 

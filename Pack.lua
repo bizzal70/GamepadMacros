@@ -53,7 +53,9 @@ function ns.HealBody(heal)
             break
         end
     end
-    return "#showtooltip\n/cast [@player] " .. cast
+    -- A living friend targeted: them. Otherwise (nothing, an enemy, or a
+    -- dead friend targeted): yourself.
+    return "#showtooltip\n/cast [help,nodead][@player] " .. cast
 end
 
 local function NoGearSets()
@@ -315,8 +317,8 @@ function ns.List()
     local list = {}
     local heal = HEALS[class]
     if heal then
-        list[#list + 1] = { name = "Heal Me", desc = heal.spell .. " on yourself, whatever you have targeted",
-            how = "Heals you, without changing your target and without aiming at your own frame. It always heals you, even with a friend targeted.",
+        list[#list + 1] = { name = "Heal Me", desc = heal.spell .. " on a friend you have targeted, else yourself",
+            how = "With a friendly player targeted, heals them. Otherwise it heals you: with nothing targeted, with an enemy targeted (your target stays on the enemy), or with a dead friend targeted. No need to aim at your own frame.",
             spells = { heal.spell }, body = ns.HealBody(heal) }
     end
     list[#list + 1] = { name = ns.QUEST_ITEM, general = true, icon = "INV_Misc_Note_06",
