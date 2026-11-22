@@ -37,6 +37,12 @@ Nothing is added until you ask. A macro you made yourself with the same name is 
 
 These macros were part of MacroKit 0.6; they moved here in their own addon. Ones MacroKit added are taken over.
 
+## Controller
+
+With a game controller, the **B** button closes the Gamepad macros window, like the X and Escape do. While a window is open, B closes it; once it is closed, B goes back to whatever you have it set to. (In combat the game does not let addons change a button, so B goes back to normal when the fight ends.)
+
+The window sizes itself to its text each time it opens, so nothing overlaps whatever text size or screen you play on (handhelds such as the Steam Deck or Legion Go included), and it shrinks to fit if it would be bigger than the screen.
+
 ## More from this author
 
 Other small addons for World of Warcraft: Forever, all free:

@@ -23,3 +23,7 @@ Ready-made macros for controller and Steam Deck players. One addon, one reposito
 ## Client facts
 
 See MacroKit's CLAUDE.md: Forever is Retail-based (Midnight 12.x API), TOC interface 16001, secret values active in combat, wrap first-time API use in `pcall`.
+
+## Controller B closes windows (2026-11-22)
+
+- `ns.CloseWithPadB(window, name)` in PadClose.lua (first in the TOC): every window listed in `UISpecialFrames` also calls it. While the window is shown, `SetOverrideBinding(window, true, "PAD2", "CLICK <name>PadClose:LeftButton")` points the controller's B at an invisible, mouse-disabled button that hides it; `ClearOverrideBindings(window)` on hide. Bindings cannot change in combat, so a change then waits for PLAYER_REGEN_ENABLED. Any new window: add it to UISpecialFrames and call `ns.CloseWithPadB` right after. Not yet confirmed in game.
