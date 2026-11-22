@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.3.5
+
+- Heal Me is tidier: just the one heal, your best, at its best rank ("/cast [@player] Lesser Heal(Rank 3)"; a priest switches to Heal once learned). It still moves up by itself when you learn a new rank.
+
 ## 0.3.4
 
 - **Heal Me casts your best rank.** In Forever, casting a heal by name alone casts Rank 1. Heal Me now names your highest learned rank ("/cast [@player] Lesser Heal(Rank 3)"), followed by the name alone in case a rank is not accepted. When you learn a new rank, Heal Me moves up to it by itself, and chat says so. A Heal Me you have edited yourself is left alone.

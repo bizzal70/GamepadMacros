@@ -85,8 +85,7 @@ C_SpellBook = {
 }
 check(ns.BestRank("Holy Light") == 2 and ns.BestRank("Lesser Heal") == nil, "the best rank learned is found, not one still to learn")
 Fire("SPELLS_CHANGED")
-check(Body("Heal Me"):find("/cast [@player] Holy Light(Rank 2)\n/cast [@player] Holy Light", 1, true) ~= nil,
-    "Heal Me casts the best rank, with the name alone after it: " .. Body("Heal Me"))
+check(Body("Heal Me") == "#showtooltip\n/cast [@player] Holy Light(Rank 2)", "Heal Me is one line, casting the best rank: " .. Body("Heal Me"))
 check(PRINTED[#PRINTED]:find("up to date: Heal Me", 1, true) ~= nil, "and says it was brought up to date")
 BOOK[4].future = nil
 Fire("SPELLS_CHANGED")

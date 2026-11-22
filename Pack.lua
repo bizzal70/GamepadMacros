@@ -74,18 +74,22 @@ function ns.BestRank(name)
     return best
 end
 
--- Heal Me's text: each heal at its best rank, then by name alone in case
--- this game does not take the rank in a macro.
+-- Heal Me's text: one line, the best heal this character knows at its
+-- best rank ("Lesser Heal(Rank 3)", or "Heal(Rank 1)" once a priest has
+-- Heal). By name alone if the spellbook shows no ranks.
 function ns.HealBody(heal)
-    local lines = { "#showtooltip" }
+    local cast = heal.spell
     for _, spell in ipairs(heal.casts) do
         local rank = ns.BestRank(spell)
-        if rank then lines[#lines + 1] = ("/cast [@player] %s(Rank %d)"):format(spell, rank) end
+        if rank then
+            cast = ("%s(Rank %d)"):format(spell, rank)
+            break
+        elseif ns.Knows(spell) then
+            cast = spell
+            break
+        end
     end
-    for _, spell in ipairs(heal.casts) do
-        lines[#lines + 1] = "/cast [@player] " .. spell
-    end
-    return table.concat(lines, "\n")
+    return "#showtooltip\n/cast [@player] " .. cast
 end
 
 local function NoGearSets()
