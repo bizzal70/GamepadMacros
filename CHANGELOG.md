@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.3.9
+
+- **Controller:** when a fight starts, B goes straight back to its usual job, even with a GamepadMacros window open (it used to stay on closing the window until the fight ended). It closes the window again once the fight is over.
+
 ## 0.3.8
 
 - **Fixed lag when opening your bags**, worst on the first opening after logging in (thanks SaltyBob for the report). Each bag change used to read every bag slot about ten times over and ask the game to load every item without a use, which then started it all again as each item arrived. Now the bags are read once and kept until they change, an item is asked for only once and only if the game has not loaded it, and a burst of arriving items brings the macros up to date once.
