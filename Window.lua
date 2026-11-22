@@ -193,6 +193,7 @@ local function CreateWindow()
     Outline(window, 0.55)
     tinsert(UISpecialFrames, addonName .. "Window")
 
+    ns.CloseWithPadB(_G[addonName .. "Window"], addonName .. "Window")
     local title = Label(window, "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", PADDING, -12)
     title:SetText("Gamepad macros")

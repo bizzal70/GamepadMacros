@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.3.2
+
+- **Controller:** the B button now closes GamepadMacros's window, like the X and Escape. While one is open, B closes it; once it is closed, B does whatever you have it set to again.
+
 ## 0.3.1
 
 - When you log in, GamepadMacros checks every macro it added and brings it up to date with the installed version, so improvements in later versions reach macros you added before. It says in chat which ones it updated. A macro you have edited yourself is left as it is.
