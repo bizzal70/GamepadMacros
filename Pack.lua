@@ -42,49 +42,13 @@ local HEALS = {
     SHAMAN = { spell = "Healing Wave", casts = { "Healing Wave" } },
 }
 
--- The highest rank of a spell this character has learned, from the
--- spellbook ("Rank 3"); nil if the spellbook shows no ranks for it. Forever
--- lists every rank, and /cast with the name alone cast Rank 1 (seen
--- 2026-11-22: Lesser Heal Rank 1, 2 and 3 in a priest's spellbook).
-function ns.BestRank(name)
-    local book = C_SpellBook
-    if not (book and book.GetSpellBookItemName) then return nil end
-    local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or 0
-    local future = Enum and Enum.SpellBookItemType and Enum.SpellBookItemType.FutureSpell
-    local best, gap = nil, 0
-    for index = 1, 1000 do
-        local ok, found, sub = pcall(book.GetSpellBookItemName, index, bank)
-        if not ok or type(found) ~= "string" then
-            -- Past the end of the spellbook.
-            gap = gap + 1
-            if gap > 30 then break end
-        else
-            gap = 0
-            if found == name then
-                local learned = true
-                if future and book.GetSpellBookItemInfo then
-                    local okInfo, info = pcall(book.GetSpellBookItemInfo, index, bank)
-                    if okInfo and type(info) == "table" and info.itemType == future then learned = false end
-                end
-                local rank = type(sub) == "string" and tonumber(sub:match("(%d+)")) or nil
-                if learned and rank and (not best or rank > best) then best = rank end
-            end
-        end
-    end
-    return best
-end
-
--- Heal Me's text: one line, the best heal this character knows at its
--- best rank ("Lesser Heal(Rank 3)", or "Heal(Rank 1)" once a priest has
--- Heal). By name alone if the spellbook shows no ranks.
+-- Heal Me's text: the best heal this character knows, by name (a priest's
+-- Heal once learned, else Lesser Heal). Casting by name casts the highest
+-- rank learned (checked in Forever's combat log 2026-11-22).
 function ns.HealBody(heal)
     local cast = heal.spell
     for _, spell in ipairs(heal.casts) do
-        local rank = ns.BestRank(spell)
-        if rank then
-            cast = ("%s(Rank %d)"):format(spell, rank)
-            break
-        elseif ns.Knows(spell) then
+        if ns.Knows(spell) then
             cast = spell
             break
         end
@@ -352,7 +316,7 @@ function ns.List()
     local heal = HEALS[class]
     if heal then
         list[#list + 1] = { name = "Heal Me", desc = heal.spell .. " on yourself, whatever you have targeted",
-            how = "Heals you with your best rank, without changing your target and without aiming at your own frame. It always heals you, even with a friend targeted. When you learn a new rank, the macro is updated to it (unless you have edited it).",
+            how = "Heals you, without changing your target and without aiming at your own frame. It always heals you, even with a friend targeted.",
             spells = { heal.spell }, body = ns.HealBody(heal) }
     end
     list[#list + 1] = { name = ns.QUEST_ITEM, general = true, icon = "INV_Misc_Note_06",

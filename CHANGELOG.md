@@ -1,5 +1,9 @@
 # GamepadMacros
 
+## 0.3.6
+
+- Heal Me names the heal without a rank again ("/cast [@player] Lesser Heal"). Forever's combat log shows that casting a spell by name already casts your highest rank, so the rank is not needed.
+
 ## 0.3.5
 
 - Heal Me is tidier: just the one heal, your best, at its best rank ("/cast [@player] Lesser Heal(Rank 3)"; a priest switches to Heal once learned). It still moves up by itself when you learn a new rank.

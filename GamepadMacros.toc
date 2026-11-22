@@ -2,7 +2,7 @@
 ## Title: GamepadMacros
 ## Notes: Ready-made macros for playing with a controller or on a Steam Deck: heal yourself, use a quest item, bandage, eat and drink, drink a potion, hearth, save and wear gear, leave a group, emotes. Type /gpm.
 ## Author: bizzal70
-## Version: 0.3.5
+## Version: 0.3.6
 ## X-Curse-Project-ID: 1792413
 ## SavedVariables: GamepadMacrosDB
 ## SavedVariablesPerCharacter: GamepadMacrosCharDB
