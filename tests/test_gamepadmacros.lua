@@ -30,7 +30,7 @@ local function check(cond, what) if not cond then error("CHECK FAILED: " .. what
 local function Has(name) return GetMacroIndexByName(name) > 0 end
 
 SPEC = nil
-Learn("Holy Light")
+Learn("Holy Light", "Blessing of Might")
 -- MacroKit 0.6 added Hello for this account before the pack moved here.
 CreateMacro("Hello", 1, "/wave", false)
 MacroKitDB = { generalMade = { Hello = true, Seal = true } }
@@ -48,7 +48,7 @@ for _, macro in ipairs(ns.List()) do
     local body = macro.Body and macro.Body() or macro.body
     check(#body <= 255, macro.name .. " fits the game's macro size")
 end
-check(table.concat(names, ",") == "Heal Me,Quest Item,Bandage,Eat & Drink,Potion,Hearth,Save Gear,Wear Gear,Leave Group,Hello,Thanks,Follow Me,Need Help",
+check(table.concat(names, ",") == "Heal Me,Heal Nearest,Buff Nearest,Quest Item,Bandage,Eat & Drink,Potion,Hearth,Save Gear,Wear Gear,Leave Group,Hello,Thanks,Follow Me,Need Help",
     "a paladin's macros: " .. table.concat(names, ","))
 CLASS = "WARRIOR"
 check(ns.List()[1].name == "Quest Item", "a class with no heal gets them without Heal Me")
@@ -71,10 +71,14 @@ local _, charBefore = GetNumMacros()
 SlashCmdList.GAMEPADMACROS("add")
 for _, name in ipairs(names) do check(Has(name), name .. " is added by /gpm add") end
 local account, character = GetNumMacros()
-check(character == charBefore + 1, "only Heal Me takes a character macro slot")
+check(character == charBefore + 3, "only Heal Me, Heal Nearest and Buff Nearest take character macro slots")
 check(account == 12, "the other twelve are account-wide General macros")
 check(Body("Heal Me") == "#showtooltip\n/cast [help,nodead][@player] Holy Light",
     "Heal Me heals a friend you have targeted, else yourself, with the paladin's heal by name: " .. Body("Heal Me"))
+check(Body("Heal Nearest") == "#showtooltip Holy Light\n/focus\n/cleartarget\n/targetfriendplayer\n/cast [help,nodead] Holy Light\n/target focus\n/clearfocus",
+    "Heal Nearest heals the nearest friendly player, never you, and puts your target back: " .. Body("Heal Nearest"))
+check(Body("Buff Nearest"):find("/cast [help,nodead] Blessing of Might", 1, true) and not Body("Buff Nearest"):find("@player", 1, true),
+    "Buff Nearest buffs them with the paladin's blessing, never you")
 SlashCmdList.GAMEPADMACROS("add")
 check(GetNumMacros() == 12, "asking again adds nothing twice")
 
@@ -273,7 +277,7 @@ local shown = {}
 for _, f in ipairs(Frames()) do
     if rawget(f, "macro") and rawget(f, "status") and f.__shown then shown[#shown + 1] = f.macro.name end
 end
-check(#shown == 13, "it lists every macro: " .. table.concat(shown, ","))
+check(#shown == 15, "it lists every macro: " .. table.concat(shown, ","))
 local saveRow
 for _, f in ipairs(Frames()) do if rawget(f, "macro") and f.macro.name == "Save Gear" then saveRow = f end end
 check(saveRow.status.__text:find("Needs gear sets", 1, true) and not saveRow.add.__shown, "a waiting macro says what it needs")

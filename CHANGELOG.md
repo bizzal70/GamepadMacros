@@ -1,5 +1,11 @@
 # GamepadMacros
 
+## 0.4.0
+
+- **Heal Nearest:** your heal on the friendly player nearest to you, never yourself (Heal Me is for that). With nobody else near, nothing is cast.
+- **Buff Nearest:** your best buff on the friendly player nearest to you: Power Word: Fortitude (priest), Arcane Intellect (mage), Mark of the Wild (druid), Blessing of Kings or else Might (paladin). Never yourself.
+- Both put your own target back straight afterwards, so you can keep fighting. They use the game's focus to do that, so any focus you had set is cleared.
+
 ## 0.3.9
 
 - **Controller:** when a fight starts, B goes straight back to its usual job, even with a GamepadMacros window open (it used to stay on closing the window until the fight ended). It closes the window again once the fight is over.

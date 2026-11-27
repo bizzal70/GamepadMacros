@@ -7,8 +7,9 @@ local addonName, ns = ...
 -- the gamepad's action bar and it is one button.
 --
 -- Macros every character can share go in the account-wide General macros
--- (120 slots), so they cost none of a character's 18. Only Heal Me, whose
--- spell is the class's, is a character macro.
+-- (120 slots), so they cost none of a character's 18. Only Heal Me, Heal
+-- Nearest and Buff Nearest, whose spells are the class's, are character
+-- macros.
 --
 -- A macro has name, desc, how and body, and may have:
 --   general  true: an account-wide General macro
@@ -41,6 +42,33 @@ local HEALS = {
     DRUID = { spell = "Healing Touch", casts = { "Healing Touch" } },
     SHAMAN = { spell = "Healing Wave", casts = { "Healing Wave" } },
 }
+
+-- The buff each class can put on someone else, best first.
+local BUFFS = {
+    PRIEST = { spell = "Power Word: Fortitude", casts = { "Power Word: Fortitude" } },
+    MAGE = { spell = "Arcane Intellect", casts = { "Arcane Intellect" } },
+    DRUID = { spell = "Mark of the Wild", casts = { "Mark of the Wild" } },
+    PALADIN = { spell = "Blessing of Might", casts = { "Blessing of Kings", "Blessing of Might" } },
+}
+
+-- The best of `entry.casts` this character knows (else the first spell).
+local function BestKnown(entry)
+    for _, spell in ipairs(entry.casts) do
+        if ns.Knows(spell) then return spell end
+    end
+    return entry.spell
+end
+
+-- Heal Nearest and Buff Nearest: the spell on the closest friendly player,
+-- never yourself (with nobody else near, nothing is cast). The game's
+-- "nearest friendly player" moves on to the next one when the nearest is
+-- already targeted, so the target is set aside first (in the focus) and
+-- put back afterwards.
+function ns.NearestBody(entry)
+    local cast = BestKnown(entry)
+    return ("#showtooltip %s\n/focus\n/cleartarget\n/targetfriendplayer\n/cast [help,nodead] %s\n/target focus\n/clearfocus")
+        :format(cast, cast)
+end
 
 -- Heal Me's text: the best heal this character knows, by name (a priest's
 -- Heal once learned, else Lesser Heal). Casting by name casts the highest
@@ -358,6 +386,15 @@ function ns.List()
         list[#list + 1] = { name = "Heal Me", desc = heal.spell .. " on a friend you have targeted, else yourself",
             how = "With a friendly player targeted, heals them. Otherwise it heals you: with nothing targeted, with an enemy targeted (your target stays on the enemy), or with a dead friend targeted. No need to aim at your own frame.",
             spells = { heal.spell }, body = ns.HealBody(heal) }
+        list[#list + 1] = { name = "Heal Nearest", desc = heal.spell .. " on the closest friendly player",
+            how = "Heals the friendly player nearest to you, never yourself (Heal Me is for that). With nobody else near, nothing is cast. Your own target is put back straight afterwards, so you can keep fighting. It uses the game's focus to do that, so any focus you had set is cleared.",
+            spells = { heal.spell }, body = ns.NearestBody(heal) }
+    end
+    local buff = BUFFS[class]
+    if buff then
+        list[#list + 1] = { name = "Buff Nearest", desc = buff.spell .. " on the closest friendly player",
+            how = "Puts your best buff on the friendly player nearest to you, never yourself. With nobody else near, nothing is cast. Your own target is put back straight afterwards. It uses the game's focus to do that, so any focus you had set is cleared.",
+            spells = { buff.spell }, body = ns.NearestBody(buff) }
     end
     list[#list + 1] = { name = ns.QUEST_ITEM, general = true, icon = "INV_Misc_Note_06",
         desc = "Uses the quest item in your bags",

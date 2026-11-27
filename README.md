@@ -7,6 +7,8 @@ Ready-made macros for playing World of Warcraft: Forever (client 1.60.x) with a 
 | Macro | What it does |
 |---|---|
 | Heal Me | Heals the friendly player you have targeted, otherwise yourself, even with an enemy targeted (Holy Light, Lesser Heal or Heal, Healing Touch, Healing Wave; paladins, priests, druids and shamans) |
+| Heal Nearest | Heals the friendly player nearest to you, never yourself; nothing is cast with nobody else near. Your target is put back afterwards (it uses the focus, so a focus you set is cleared) |
+| Buff Nearest | Your best buff on the friendly player nearest to you, never yourself: Power Word: Fortitude, Arcane Intellect, Mark of the Wild, or Blessing of Kings or Might (priests, mages, druids, paladins) |
 | Quest Item | Uses the quest item in your bags: one that starts a quest first, else a quest item you can use. GamepadMacros keeps it pointing at the right item as your bags change |
 | Bandage | Uses your best bandage |
 | Eat & Drink | Eats your best plain food; once you are eating it turns into your best plain drink, so a second press drinks too. Back to the food when you move or stand up. Skips buff (Well Fed) food |
@@ -17,7 +19,7 @@ Ready-made macros for playing World of Warcraft: Forever (client 1.60.x) with a 
 | Leave Group | Leaves your party or raid |
 | Hello, Thanks, Follow Me, Need Help | The /wave, /thank, /followme and /helpme emotes, for when there is no keyboard to type on |
 
-The macros that use something from your bags (Quest Item, Bandage, Eat & Drink, Potion) follow your bags as they change, outside combat, and always pick the best item your character is high enough to use. All but Heal Me are account-wide General macros, so they use none of a character's 18 macro slots and every character shares them.
+The macros that use something from your bags (Quest Item, Bandage, Eat & Drink, Potion) follow your bags as they change, outside combat, and always pick the best item your character is high enough to use. All but Heal Me, Heal Nearest and Buff Nearest are account-wide General macros, so they use none of a character's 18 macro slots and every character shares them.
 
 ## Using it
 

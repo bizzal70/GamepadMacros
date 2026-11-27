@@ -392,7 +392,8 @@ frame:SetScript("OnEvent", function(self, event, arg)
             ns.UpdateMinimapButton()
         end
     elseif event == "SPELLS_CHANGED" then
-        -- A new rank learned: Heal Me moves up to it.
+        -- A new rank or a better spell learned: Heal Me, Heal Nearest and
+        -- Buff Nearest move up to it.
         if ns.db and ns.char and not InCombatLockdown() then ns.UpdateAllMacros() end
         ns.RefreshWindow()
     elseif event == "PLAYER_REGEN_DISABLED" or event == "UPDATE_MACROS" then
