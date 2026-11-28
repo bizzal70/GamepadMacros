@@ -218,8 +218,15 @@ check(ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "#showtooltip 
 ns.db.generalMade["Eat & Drink"] = nil
 MACROS[GetMacroIndexByName("Eat & Drink")].body = "#showtooltip item:159\r\n/use item:159\n"   -- as the game may hand it back
 Fire("BAG_UPDATE_DELAYED")
+check(not ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink"):find("item:159", 1, true),
+    "a plain use-this-item macro (it could be the player's own) is not taken over by itself")
+local eatDrink
+for _, m in ipairs(ns.List()) do if m.name == "Eat & Drink" then eatDrink = m end end
+check(ns.CanAdopt(eatDrink), "but it is offered back, even with a line break or carriage return the game adds after the text")
+ns.Adopt("Eat & Drink")
 check(ns.db.generalMade["Eat & Drink"] and Body("Eat & Drink") == "#showtooltip item:2287\n/use item:2287",
-    "a line break or carriage return the game adds after the text does not stop it being recognised")
+    "Keep updated takes it back and brings it up to date")
+check(not ns.CanAdopt(eatDrink), "and then isn't offered again")
 SlashCmdList.GAMEPADMACROS("debug")
 ns.db.generalMade["Eat & Drink"] = nil
 MACROS[GetMacroIndexByName("Eat & Drink")].body = "/use Haunch of Meat\n/say yum"
@@ -349,3 +356,48 @@ do
     check(bound[w] == "PAD2", "and borrowed again once the fight is over")
     w:Hide(); w.__scripts.OnHide(w)
 end
+
+-- 0.5.0: To bar, Remove pressed twice, key binding, debug.
+do
+    local function FakeButton(slot, visible)
+        return { action = slot, IsObjectType = function(_, kind) return kind == "Button" end,
+            IsVisible = function() return visible end }
+    end
+    local BUTTONS = { FakeButton(1, true), FakeButton(2, true) }
+    EnumerateFrames = function(after)
+        if after == nil then return BUTTONS[1] end
+        for i, b in ipairs(BUTTONS) do if b == after then return BUTTONS[i + 1] end end
+    end
+    ACTIONS = { [1] = { kind = "spell", id = 5 } }
+    HasAction = function(slot) return ACTIONS[slot] ~= nil end
+    ClearCursor = function() PICKED = nil end
+    PlaceAction = function(slot)
+        if PICKED then ACTIONS[slot] = { kind = "macro", id = GetMacroIndexByName(PICKED), text = PICKED } end
+    end
+    IN_COMBAT = false
+    if not GamepadMacrosWindow:IsShown() then ns.ToggleWindow() end
+    ns.AddAll()
+    local row
+    for _, f in ipairs(Frames()) do
+        if rawget(f, "macro") and f.macro.name == "Hello" and f.__shown then row = f end
+    end
+    check(row and row.add.__shown and row.add.label.__text == "To bar", "a macro in the list but not on a bar has To bar")
+    row.add.__scripts.OnClick(row.add)
+    check(ACTIONS[2] and ACTIONS[2].text == "Hello", "To bar puts it on the first empty button on screen")
+    check(row.status.__text:find("On your bars", 1, true) and not row.add.__shown, "and the row then says it's on your bars")
+
+    local remove
+    for _, f in ipairs(Frames()) do
+        if rawget(f, "label") and f.label.__text and f.label.__text:find("^Remove GamepadMacros") then remove = f end
+    end
+    remove.__scripts.OnClick(remove)
+    check(Has("Hello") and remove.label.__text == "Press again to remove them", "Remove in the window asks for a second press")
+    remove.__scripts.OnClick(remove)
+    check(not Has("Hello"), "and removes on the second")
+
+    check(BINDING_NAME_GAMEPADMACROS_WINDOW and type(GamepadMacros_ToggleWindow) == "function", "a key binding opens the window")
+    local before = #PRINTED
+    SlashCmdList.GAMEPADMACROS("debug")
+    check(PRINTED[before + 1]:find("version", 1, true), "/gpm debug starts with the version")
+end
+

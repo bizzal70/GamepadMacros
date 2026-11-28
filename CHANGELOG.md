@@ -1,5 +1,15 @@
 # GamepadMacros
 
+## 0.5.0
+
+- **To bar:** a macro in your list but not on your bars has a To bar button that puts it on the first empty action button on screen, no dragging needed. Rows say "On your bars" once it's there.
+- **Your own macros are safer:** a Potion, Bandage, Quest Item or Eat & Drink macro that only looks like GamepadMacros' (a plain "use this item" macro) is no longer taken over by itself. If it really is one GamepadMacros made and lost track of, its row has a Keep updated button.
+- **Remove asks you to press it twice,** so a slip can't delete your macros.
+- When your character macros are full and MacroKit is installed, it says you can make room there.
+- The window remembers where you put it.
+- GamepadMacros is listed in Options > AddOns, and has a key binding to open its window.
+- A one-time welcome line, and `/gpm debug` now starts with the version, for bug reports.
+
 ## 0.4.0
 
 - **Heal Nearest:** your heal on the friendly player nearest to you, never yourself (Heal Me is for that). With nobody else near, nothing is cast.

@@ -20,6 +20,8 @@ local QUESTION_MARK = 134400
 
 local window, title, close, closeLabel, intro, addAllButton, removeButton
 local rows = {}
+-- Remove asks for a second press within a few seconds.
+local removeArmed = false
 
 local function Fill(frame, r, g, b, a)
     local texture = frame:CreateTexture(nil, "BACKGROUND")
@@ -160,8 +162,11 @@ local function ShowTooltip(row)
     end
     GameTooltip:AddLine(" ")
     local status, missing = ns.Status(macro)
-    if status == "have" then
-        GameTooltip:AddLine("Drag onto your action bars, or click to pick it up.", 0.25, 1, 0.25, true)
+    if row.mode == "adopt" then
+        GameTooltip:AddLine("This looks like GamepadMacros' own, but it has no record of making it. "
+            .. "Click Keep updated to have it follow your bags again; leave it if you wrote it yourself.", 1, 0.82, 0, true)
+    elseif status == "have" then
+        GameTooltip:AddLine("Click To bar, or drag it onto an action button.", 0.25, 1, 0.25, true)
     elseif status == "ready" then
         GameTooltip:AddLine("Click Add to put it in your macros.", 1, 0.82, 0, true)
     else
@@ -189,7 +194,12 @@ local function CreateRow(index)
     row.status = Label(row, "GameFontHighlightSmall", "RIGHT")
     row.status:SetPoint("RIGHT", -4, 0)
     row.status:SetWordWrap(true)
-    row.add = TextButton(row, "Add", "GameFontHighlightSmall", function() ns.AddOne(row.macro) end)
+    -- Add, To bar, or Keep updated, by what the row needs (row.mode).
+    row.add = TextButton(row, "Add", "GameFontHighlightSmall", function()
+        if row.mode == "bar" then ns.ToBar(row.macro.name)
+        elseif row.mode == "adopt" then ns.Adopt(row.macro.name)
+        else ns.AddOne(row.macro) end
+    end)
     row.add:SetPoint("RIGHT", -4, 0)
     row:RegisterForDrag("LeftButton")
     row:SetScript("OnDragStart", function() PickUp(row.macro) end)
@@ -288,6 +298,7 @@ local function Refresh()
     local inCombat = InCombatLockdown()
     local list = ns.List()
     local addable, made = 0, false
+    local onBars = ns.MacrosOnBars and ns.MacrosOnBars() or {}
     for index, macro in ipairs(list) do
         local row = rows[index] or CreateRow(index)
         row.macro = macro
@@ -295,14 +306,29 @@ local function Refresh()
         row.name:SetText(macro.name)
         row.desc:SetText(macro.desc or "")
         local status, missing = ns.Status(macro)
+        row.mode = nil
         if status == "have" then
-            row.status:SetText("|cff40ff40In your macros|r")
             row.icon:SetDesaturated(false)
-            row.add:Hide()
+            if ns.CanAdopt(macro) then
+                row.mode = "adopt"
+                row.add.label:SetText("Keep updated")
+                row.add:Show()
+                row.add:SetActive(not inCombat)
+            elseif onBars[macro.name] then
+                row.status:SetText("|cff40ff40On your bars|r")
+                row.add:Hide()
+            else
+                row.mode = "bar"
+                row.status:SetText("|cff40ff40In your macros|r")
+                row.add.label:SetText("To bar")
+                row.add:Show()
+                row.add:SetActive(not inCombat)
+            end
         elseif status == "ready" then
             addable = addable + 1
             row.status:SetText("|cffffd100Ready to add|r")
             row.icon:SetDesaturated(false)
+            row.add.label:SetText("Add")
             row.add:Show()
             row.add:SetActive(not inCombat)
         else
@@ -317,13 +343,20 @@ local function Refresh()
     addAllButton.label:SetText(addable > 0 and ("Add all (" .. addable .. ")") or "Add all")
     addAllButton:SetActive(addable > 0 and not inCombat)
     removeButton:SetActive(made and not inCombat)
+    removeButton.label:SetText(removeArmed and "Press again to remove them" or "Remove GamepadMacros' macros")
     local ok, problem = pcall(Layout, #list)
     if not ok and ns.Print then ns.Print("Could not lay out the window: " .. tostring(problem)) end
 end
 
 local function CreateWindow()
     window = CreateFrame("Frame", addonName .. "Window", UIParent)
-    window:SetPoint("CENTER")
+    -- Where it was last dragged to, or the middle.
+    local saved = ns.db.windowPoint
+    if type(saved) == "table" and saved[1] then
+        window:SetPoint(saved[1], UIParent, saved[2], saved[3], saved[4])
+    else
+        window:SetPoint("CENTER")
+    end
     window:SetFrameStrata("HIGH")
     window:SetToplevel(true)
     window:EnableMouse(true)
@@ -331,7 +364,11 @@ local function CreateWindow()
     window:SetClampedToScreen(true)
     window:RegisterForDrag("LeftButton")
     window:SetScript("OnDragStart", window.StartMoving)
-    window:SetScript("OnDragStop", window.StopMovingOrSizing)
+    window:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local point, _, relativePoint, x, y = self:GetPoint()
+        if point then ns.db.windowPoint = { point, relativePoint, x, y } end
+    end)
     window:Hide()
     Fill(window, 0.05, 0.05, 0.06, 0.97)
     Outline(window, 0.55)
@@ -353,14 +390,31 @@ local function CreateWindow()
 
     intro = Label(window, "GameFontHighlightSmall")
     intro:SetWordWrap(true)
-    intro:SetText("Click Add, then drag a macro onto your gamepad's action bar. Hover over one to see how it works.")
+    intro:SetText("Click Add, then To bar to put a macro on the first empty button of your action bars (or drag it there). Hover over one to see how it works.")
 
     addAllButton = TextButton(window, "Add all", "GameFontHighlightSmall", function() ns.AddAll() end)
-    removeButton = TextButton(window, "Remove GamepadMacros' macros", "GameFontHighlightSmall", function() ns.Remove() end)
+    -- Deleting asks for a second press, within 4 seconds.
+    removeButton = TextButton(window, "Remove GamepadMacros' macros", "GameFontHighlightSmall", function()
+        if removeArmed then
+            removeArmed = false
+            ns.Remove()
+            return
+        end
+        removeArmed = true
+        Refresh()
+        if C_Timer and C_Timer.After then
+            C_Timer.After(4, function()
+                if removeArmed then
+                    removeArmed = false
+                    ns.RefreshWindow()
+                end
+            end)
+        end
+    end)
 
     -- The screen or the game's interface scale changing: lay out again.
     window:SetScript("OnEvent", function(self) if self:IsShown() then Refresh() end end)
-    for _, event in ipairs({ "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED" }) do
+    for _, event in ipairs({ "UI_SCALE_CHANGED", "DISPLAY_SIZE_CHANGED", "ACTIONBAR_SLOT_CHANGED" }) do
         pcall(window.RegisterEvent, window, event)
     end
 end
@@ -384,6 +438,32 @@ end
 function ns.WindowShown()
     return window ~= nil and window:IsShown()
 end
+
+-- Listed in the game's own Options > AddOns, with a button that opens the
+-- window: that's where many players look first.
+local function RegisterSettings()
+    if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory) then return end
+    local panel = CreateFrame("Frame")
+    local heading = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    heading:SetPoint("TOPLEFT", 16, -16)
+    heading:SetText("GamepadMacros")
+    local text = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    text:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -8)
+    text:SetWidth(520)
+    text:SetJustifyH("LEFT")
+    text:SetText("Ready-made macros for playing with a controller: heal yourself or the nearest player, potion, food and drink, quest item, hearth and more. Add them in GamepadMacros' window.")
+    local open = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    open:SetSize(220, 26)
+    open:SetPoint("TOPLEFT", text, "BOTTOMLEFT", 0, -12)
+    open:SetText("Open GamepadMacros")
+    open:SetScript("OnClick", function()
+        if SettingsPanel and SettingsPanel.IsShown and SettingsPanel:IsShown() and HideUIPanel then pcall(HideUIPanel, SettingsPanel) end
+        if not ns.WindowShown() then ns.ToggleWindow() end
+    end)
+    local category = Settings.RegisterCanvasLayoutCategory(panel, "GamepadMacros")
+    Settings.RegisterAddOnCategory(category)
+end
+pcall(RegisterSettings)
 
 function ns.RefreshWindow()
     if window and window:IsShown() then Refresh() end

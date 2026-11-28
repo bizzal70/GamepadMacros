@@ -26,9 +26,9 @@ The macros that use something from your bags (Quest Item, Bandage, Eat & Drink, 
 Type `/gpm` (or `/gamepadmacros`), or use the minimap button, which shows once you use a controller (press a button or move a stick), so it stays out of the way when you play with mouse and keyboard.
 
 1. In the **Gamepad macros** window, click **Add** on a macro, or **Add all**.
-2. Drag the macro from the window onto a slot on your gamepad's action bar (or click it once to pick it up, then click the slot).
+2. Click **To bar**: the macro goes on the first empty button of your action bars. Or drag it from the window onto a slot (or click it once to pick it up, then click the slot). Rows say *On your bars* once it's there.
 
-Nothing is added until you ask. A macro you made yourself with the same name is never overwritten. Each time you log in, the macros GamepadMacros added are brought up to date with the version you have installed (it says in chat which ones changed); one you have edited yourself is left alone. If the game cannot do something (gear sets, for example), that macro says what it needs instead of being added.
+Nothing is added until you ask. A macro you made yourself with the same name is never overwritten: if one only looks like GamepadMacros' own (a plain "use this item" Potion, say), it's left alone, and its row offers **Keep updated** in case GamepadMacros really made it and lost track. **Remove** in the window asks you to press it twice. Each time you log in, the macros GamepadMacros added are brought up to date with the version you have installed (it says in chat which ones changed); one you have edited yourself is left alone. If the game cannot do something (gear sets, for example), that macro says what it needs instead of being added.
 
 | Command | What it does |
 |---|---|
@@ -36,6 +36,9 @@ Nothing is added until you ask. A macro you made yourself with the same name is 
 | `/gpm add` | Add every macro you are missing |
 | `/gpm remove` | Delete the macros GamepadMacros added (your own stay) |
 | `/gpm button` | Minimap button on or off |
+| `/gpm debug` | Version and what the bag macros use, for a bug report ([issues](https://github.com/bizzal70/GamepadMacros/issues)) |
+
+GamepadMacros is also in Esc > Options > AddOns, and has a key binding to open the window (Options > Keybindings > AddOns). The window remembers where you drag it.
 
 These macros were part of MacroKit 0.6; they moved here in their own addon. Ones MacroKit added are taken over.
 

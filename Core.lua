@@ -14,6 +14,8 @@ local accountDefaults = {
     generalMade = {},    -- name -> true for each account-wide macro this addon added
     iconSet = {},        -- name -> true once a bag macro has the question-mark icon
     written = {},        -- name -> the text this addon last gave each account-wide macro
+    windowPoint = nil,   -- where the window was last dragged to
+    welcomed = false,    -- the one-time welcome line has been shown
 }
 local charDefaults = {
     made = {},           -- name -> true for each character macro this addon added (Heal Me)
@@ -73,7 +75,12 @@ function ns.AddOne(macro, quiet)
     end
     if ns.Status(macro) ~= "ready" then return false end
     if FreeSlots(macro.general) <= 0 then
-        ns.Print("Your " .. (macro.general and "General" or "character") .. " macros are full, so " .. macro.name .. " was not added.")
+        local hint = ""
+        local okLoaded, macroKit = pcall(function() return C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("MacroKit") end)
+        if not macro.general and okLoaded and macroKit then
+            hint = " Remove MacroKit macros you don't use (/macrokit) to make room."
+        end
+        ns.Print("Your " .. (macro.general and "General" or "character") .. " macros are full, so " .. macro.name .. " was not added." .. hint)
         return false
     end
     local body = macro.Body and macro.Body() or macro.body
@@ -89,7 +96,7 @@ function ns.AddOne(macro, quiet)
         if macro.general then ns.db.generalMade[macro.name] = true else ns.char.made[macro.name] = true end
         if macro.Body then ns.db.iconSet[macro.name] = true end
         ns.Written(macro)[macro.name] = body
-        if not quiet then ns.Print("Added " .. macro.name .. ". Drag it from the window or /macro to your bars.") end
+        if not quiet then ns.Print("Added " .. macro.name .. ". Click To bar in the window to put it on your action bar, or drag it there.") end
         ns.RefreshWindow()
         return true
     end
@@ -113,7 +120,7 @@ function ns.AddAll()
         end
     end
     if #added > 0 then
-        ns.Print("Added: " .. table.concat(added, ", ") .. ". Put them on your gamepad's bars from the window or /macro.")
+        ns.Print("Added: " .. table.concat(added, ", ") .. ". Put them on your gamepad's bars with To bar in the window, or drag them.")
     else
         ns.Print("You already have every gamepad macro this character can use.")
     end
@@ -158,11 +165,15 @@ end
 -- written when the game closes normally, so after a crash the macro exists
 -- but the record does not, and it was never kept up to date again (Eat &
 -- Drink stuck on water only, found 2026-11-17).
+--
+-- Only the shapes nobody writes by hand are taken back by themselves (sure
+-- = true). A plain "use this item" macro could be the player's own Potion
+-- or Bandage, so for those the window asks first (Keep updated).
 local OUR_SHAPES = {
-    "^#showtooltip item:%d+\n/use item:%d+$",
-    "^#showtooltip item:%d+\n/use item:%d+\n/use item:%d+$",
-    "^#showtooltip\n/castsequence reset=%d+ item:%d+, item:%d+$",
-    '^/run print%("GamepadMacros: no [^"]*"%)$',
+    { "^#showtooltip item:%d+\n/use item:%d+$" },
+    { "^#showtooltip item:%d+\n/use item:%d+\n/use item:%d+$" },
+    { "^#showtooltip\n/castsequence reset=%d+ item:%d+, item:%d+$", sure = true },
+    { '^/run print%("GamepadMacros: no [^"]*"%)$', sure = true },
 }
 -- The game can hand back a macro's text with a line break (or a carriage
 -- return) after it that was never typed; it is ignored when comparing.
@@ -171,13 +182,36 @@ local function Trim(text)
 end
 ns.Trim = Trim
 
-function ns.LooksMade(body)
+-- With sure, only the shapes that are certainly this addon's.
+function ns.LooksMade(body, sure)
     if type(body) ~= "string" then return false end
     body = Trim(body)
     for _, shape in ipairs(OUR_SHAPES) do
-        if body:find(shape) then return true end
+        if (shape.sure or not sure) and body:find(shape[1]) then return true end
     end
     return false
+end
+
+-- A macro in the list under one of this addon's bag macros' names, in its
+-- shape, that it has no record of making: the window offers to take it back.
+function ns.CanAdopt(macro)
+    if not macro.Body or ns.Made(macro.name) then return false end
+    local okIndex, index = pcall(GetMacroIndexByName, macro.name)
+    if not okIndex or type(index) ~= "number" or index == 0 then return false end
+    local okInfo, _, _, current = pcall(GetMacroInfo, index)
+    return okInfo and ns.LooksMade(current) or false
+end
+
+-- Takes such a macro back, so it follows the bags again.
+function ns.Adopt(name)
+    if InCombatLockdown() then
+        ns.Print("Macros cannot be changed in combat.")
+        return
+    end
+    ns.db.generalMade[name] = true
+    ns.UpdateItemMacros()
+    ns.Print(name .. " will follow your bags again.")
+    ns.RefreshWindow()
 end
 
 -- Keeps the macros that use something from the bags (Quest Item, Bandage,
@@ -191,7 +225,7 @@ function ns.UpdateItemMacros()
             local ok, index = pcall(GetMacroIndexByName, macro.name)
             if ok and type(index) == "number" and index > 0 then
                 local okInfo, _, _, current = pcall(GetMacroInfo, index)
-                if not ns.db.generalMade[macro.name] and okInfo and ns.LooksMade(current) then
+                if not ns.db.generalMade[macro.name] and okInfo and ns.LooksMade(current, true) then
                     ns.db.generalMade[macro.name] = true
                 end
                 if ns.db.generalMade[macro.name] then
@@ -291,6 +325,11 @@ SlashCmdList.GAMEPADMACROS = function(msg)
     elseif command == "remove" then
         ns.Remove()
     elseif command == "debug" then
+        local version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version") or "?"
+        local okCount, account, perCharacter = pcall(GetNumMacros)
+        ns.Print(("version %s; macros used: %s General, %s character; controller used this session: %s.")
+            :format(tostring(version), okCount and tostring(account) or "?", okCount and tostring(perCharacter) or "?",
+                tostring(ns.controllerUsed or false)))
         -- What the game reports for each macro that follows the bags.
         ns.UpdateItemMacros()
         local food, drink = ns.FoodAndDrink()
@@ -322,8 +361,14 @@ SlashCmdList.GAMEPADMACROS = function(msg)
         ns.Print("/gpm add - add every gamepad macro you are missing")
         ns.Print("/gpm remove - delete the macros GamepadMacros added")
         ns.Print("/gpm button - minimap button on or off")
+        ns.Print("/gpm debug - version and what the bag macros use, for a bug report (github.com/bizzal70/GamepadMacros/issues)")
     end
 end
+
+-- Key bindings (Bindings.xml), under Options > Keybindings > AddOns.
+BINDING_HEADER_GAMEPADMACROS = "GamepadMacros"
+BINDING_NAME_GAMEPADMACROS_WINDOW = "Open the GamepadMacros window"
+function GamepadMacros_ToggleWindow() ns.ToggleWindow() end
 
 -- Entry in the minimap's addon list.
 function GamepadMacros_OnAddonCompartmentClick()
@@ -384,6 +429,11 @@ frame:SetScript("OnEvent", function(self, event, arg)
     elseif event == "PLAYER_LOGIN" then
         AdoptFromMacroKit()
         ns.UpdateAllMacros()
+        if not ns.db.welcomed then
+            ns.db.welcomed = true
+            ns.Print("Ready-made macros for playing with a controller: heal, potion, food, quest item and more. "
+                .. "/gpm opens the window; the minimap button shows once you use a controller.")
+        end
     elseif event == "GAME_PAD_ACTIVE_CHANGED" then
         -- The first controller button or stick: the minimap button shows
         -- for the rest of the session.

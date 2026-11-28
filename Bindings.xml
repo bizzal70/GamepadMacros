@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="GAMEPADMACROS_WINDOW" header="GAMEPADMACROS" category="ADDONS">
+		GamepadMacros_ToggleWindow()
+	</Binding>
+</Bindings>
